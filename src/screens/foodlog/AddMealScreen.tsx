@@ -4,21 +4,15 @@ import {
     StatusBar, KeyboardAvoidingView, Platform, TextInput, ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { generateId } from '../../utils/generateId';
 import { estimateFromText } from '../../utils/foodEstimator';
 import { estimateWithAI } from '../../utils/aiEstimator';
 import { useFoodLogStore } from '../../store/useFoodLogStore';
 import { useSavedMealsStore } from '../../store/useSavedMealsStore';
-import { InputField } from '../../components/common/InputField';
-import { PrimaryButton } from '../../components/common/PrimaryButton';
 import { getToday } from '../../utils/dateHelpers';
-import { RootStackParamList } from '../../navigation/types';
 import { MealType } from '../../types/food';
 import { theme } from '../../constants/theme';
-
-type Nav = StackNavigationProp<RootStackParamList>;
 
 const MEAL_TYPES: { type: MealType; label: string }[] = [
     { type: 'breakfast', label: 'Breakfast' },
@@ -27,52 +21,49 @@ const MEAL_TYPES: { type: MealType; label: string }[] = [
     { type: 'snack', label: 'Snack' },
 ];
 
-interface Estimation {
-    source: 'ai' | 'local';
-    items: string;
-    calories: number;
-    protein_g: number;
-    carbs_g: number;
-    fat_g: number;
-}
-
 export function AddMealScreen() {
-    const navigation = useNavigation<Nav>();
+    const navigation = useNavigation();
     const addMeal = useFoodLogStore((s) => s.addMeal);
     const savedMeals = useSavedMealsStore((s) => s.savedMeals);
 
-    const [description, setDescription] = useState('');
-    const [name, setName] = useState('');
     const [mealType, setMealType] = useState<MealType>('lunch');
-    const [calories, setCalories] = useState('');
-    const [protein, setProtein] = useState('');
-    const [carbs, setCarbs] = useState('');
-    const [fat, setFat] = useState('');
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [estimation, setEstimation] = useState<Estimation | null>(null);
+
+    // AI estimate state
+    const [description, setDescription] = useState('');
     const [loading, setLoading] = useState(false);
-    const [didApply, setDidApply] = useState(false);
     const [aiError, setAiError] = useState('');
+    const [estimateReady, setEstimateReady] = useState(false);
+
+    // AI estimate editable fields
+    const [aiName, setAiName] = useState('');
+    const [aiCalories, setAiCalories] = useState('');
+    const [aiProtein, setAiProtein] = useState('');
+    const [aiCarbs, setAiCarbs] = useState('');
+    const [aiFat, setAiFat] = useState('');
+
+    // Manual entry fields (independent)
+    const [manualOpen, setManualOpen] = useState(false);
+    const [manualName, setManualName] = useState('');
+    const [manualCalories, setManualCalories] = useState('');
+    const [manualProtein, setManualProtein] = useState('');
+    const [manualCarbs, setManualCarbs] = useState('');
+    const [manualFat, setManualFat] = useState('');
 
     const handleEstimate = useCallback(async () => {
         if (description.trim().length < 3) return;
         setLoading(true);
-        setEstimation(null);
-        setDidApply(false);
+        setEstimateReady(false);
         setAiError('');
 
         try {
-            // Try AI first
             const aiResult = await estimateWithAI(description.trim());
             if (aiResult) {
-                setEstimation({
-                    source: 'ai',
-                    items: aiResult.items,
-                    calories: aiResult.calories,
-                    protein_g: aiResult.protein_g,
-                    carbs_g: aiResult.carbs_g,
-                    fat_g: aiResult.fat_g,
-                });
+                setAiName(aiResult.items);
+                setAiCalories(aiResult.calories.toString());
+                setAiProtein(aiResult.protein_g.toString());
+                setAiCarbs(aiResult.carbs_g.toString());
+                setAiFat(aiResult.fat_g.toString());
+                setEstimateReady(true);
                 setLoading(false);
                 return;
             }
@@ -81,51 +72,52 @@ export function AddMealScreen() {
             setAiError(`AI error: ${e?.message || 'unknown'}`);
         }
 
-        // Fallback to local keyword matching
         const localResult = estimateFromText(description.trim());
         if (localResult) {
-            setEstimation({
-                source: 'local',
-                items: localResult.matchedItem,
-                calories: localResult.calories,
-                protein_g: localResult.protein_g,
-                carbs_g: localResult.carbs_g,
-                fat_g: localResult.fat_g,
-            });
+            setAiName(localResult.matchedItem);
+            setAiCalories(localResult.calories.toString());
+            setAiProtein(localResult.protein_g.toString());
+            setAiCarbs(localResult.carbs_g.toString());
+            setAiFat(localResult.fat_g.toString());
+            setEstimateReady(true);
         }
         setLoading(false);
     }, [description]);
 
-    const applyEstimation = () => {
-        if (!estimation) return;
-        if (!name) setName(estimation.items);
-        setCalories(estimation.calories.toString());
-        setProtein(estimation.protein_g.toString());
-        setCarbs(estimation.carbs_g.toString());
-        setFat(estimation.fat_g.toString());
-        setDidApply(true);
-    };
-
-    const handleSave = () => {
-        const errs: Record<string, string> = {};
-        if (!name.trim()) errs.name = 'Enter meal name';
-        if (!calories || parseInt(calories) <= 0) errs.calories = 'Enter valid calories';
-        setErrors(errs);
-        if (Object.keys(errs).length > 0) return;
-
+    const handleLogAI = () => {
+        if (!aiName.trim() || !aiCalories) return;
         addMeal({
             id: generateId(),
             date: getToday(),
-            name: name.trim(),
-            calories: parseInt(calories),
-            protein_g: parseInt(protein) || 0,
-            carbs_g: parseInt(carbs) || 0,
-            fat_g: parseInt(fat) || 0,
+            name: aiName.trim(),
+            calories: parseInt(aiCalories) || 0,
+            protein_g: parseInt(aiProtein) || 0,
+            carbs_g: parseInt(aiCarbs) || 0,
+            fat_g: parseInt(aiFat) || 0,
             meal_type: mealType,
             logged_at: new Date().toISOString(),
         });
         navigation.goBack();
     };
+
+    const handleLogManual = () => {
+        if (!manualName.trim() || !manualCalories) return;
+        addMeal({
+            id: generateId(),
+            date: getToday(),
+            name: manualName.trim(),
+            calories: parseInt(manualCalories) || 0,
+            protein_g: parseInt(manualProtein) || 0,
+            carbs_g: parseInt(manualCarbs) || 0,
+            fat_g: parseInt(manualFat) || 0,
+            meal_type: mealType,
+            logged_at: new Date().toISOString(),
+        });
+        navigation.goBack();
+    };
+
+    const canLogAI = aiName.trim().length > 0 && aiCalories.length > 0;
+    const canLogManual = manualName.trim().length > 0 && manualCalories.length > 0;
 
     return (
         <KeyboardAvoidingView
@@ -157,11 +149,12 @@ export function AddMealScreen() {
                                         key={sm.id}
                                         style={styles.savedCard}
                                         onPress={() => {
-                                            setName(sm.name);
-                                            setCalories(sm.calories.toString());
-                                            setProtein(sm.protein_g.toString());
-                                            setCarbs(sm.carbs_g.toString());
-                                            setFat(sm.fat_g.toString());
+                                            setManualName(sm.name);
+                                            setManualCalories(sm.calories.toString());
+                                            setManualProtein(sm.protein_g.toString());
+                                            setManualCarbs(sm.carbs_g.toString());
+                                            setManualFat(sm.fat_g.toString());
+                                            setManualOpen(true);
                                         }}
                                     >
                                         <Text style={styles.savedCardName} numberOfLines={1}>{sm.name}</Text>
@@ -173,15 +166,6 @@ export function AddMealScreen() {
                         </ScrollView>
                     </View>
                 )}
-
-                {/* Save Meal Button */}
-                <TouchableOpacity
-                    style={styles.saveMealLink}
-                    onPress={() => navigation.navigate('SaveMeal')}
-                >
-                    <Ionicons name="bookmark-outline" size={16} color={theme.colors.primary} />
-                    <Text style={styles.saveMealLinkText}>Create a Saved Meal</Text>
-                </TouchableOpacity>
 
                 {/* Meal Type */}
                 <Text style={styles.fieldLabel}>Meal Type</Text>
@@ -199,7 +183,7 @@ export function AddMealScreen() {
                     ))}
                 </View>
 
-                {/* Smart Description */}
+                {/* AI Describe Section */}
                 <View style={styles.descSection}>
                     <View style={styles.descHeader}>
                         <Ionicons name="sparkles" size={16} color={theme.colors.primary} />
@@ -214,8 +198,6 @@ export function AddMealScreen() {
                         multiline
                         numberOfLines={2}
                     />
-
-                    {/* Estimate Button */}
                     <TouchableOpacity
                         style={[styles.estimateBtn, description.trim().length < 3 && styles.estimateBtnDisabled]}
                         onPress={handleEstimate}
@@ -230,74 +212,171 @@ export function AddMealScreen() {
                             </>
                         )}
                     </TouchableOpacity>
-
-                    {/* Estimation Result */}
-                    {estimation && (
-                        <View style={styles.estimationCard}>
-                            <View style={styles.estimationHeader}>
-                                <Text style={styles.estimationMatch} numberOfLines={2}>
-                                    {estimation.items}
-                                </Text>
-                                <View style={[styles.sourceBadge, {
-                                    backgroundColor: estimation.source === 'ai' ? '#ede9fe' : '#e6f9f0',
-                                }]}>
-                                    <Text style={[styles.sourceText, {
-                                        color: estimation.source === 'ai' ? '#7c3aed' : theme.colors.primary,
-                                    }]}>
-                                        {estimation.source === 'ai' ? '✨ AI' : '📋 Local'}
-                                    </Text>
-                                </View>
-                            </View>
-                            <View style={styles.estimationMacros}>
-                                <View style={styles.macroChip}>
-                                    <Text style={styles.macroChipLabel}>Cal</Text>
-                                    <Text style={styles.macroChipVal}>{estimation.calories}</Text>
-                                </View>
-                                <View style={styles.macroChip}>
-                                    <Text style={styles.macroChipLabel}>Protein</Text>
-                                    <Text style={styles.macroChipVal}>{estimation.protein_g}g</Text>
-                                </View>
-                                <View style={styles.macroChip}>
-                                    <Text style={styles.macroChipLabel}>Carbs</Text>
-                                    <Text style={styles.macroChipVal}>{estimation.carbs_g}g</Text>
-                                </View>
-                                <View style={styles.macroChip}>
-                                    <Text style={styles.macroChipLabel}>Fat</Text>
-                                    <Text style={styles.macroChipVal}>{estimation.fat_g}g</Text>
-                                </View>
-                            </View>
-                            {!didApply ? (
-                                <TouchableOpacity style={styles.applyBtn} onPress={applyEstimation}>
-                                    <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                                    <Text style={styles.applyBtnText}>Apply Estimate</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <View style={styles.appliedRow}>
-                                    <Ionicons name="checkmark-circle" size={16} color={theme.colors.primary} />
-                                    <Text style={styles.appliedText}>Applied! Edit values below if needed.</Text>
-                                </View>
-                            )}
-                        </View>
-                    )}
-                    {!loading && description.trim().length >= 3 && estimation === null && didApply === false && (
-                        <Text style={styles.noMatch}>Tap "Estimate Nutrition" to analyze</Text>
-                    )}
                     {aiError ? <Text style={styles.aiErrorText}>{aiError}</Text> : null}
                 </View>
 
-                <InputField label="Meal Name" value={name} onChangeText={setName} placeholder="Mediterranean Bowl" error={errors.name} />
-                <InputField label="Calories" value={calories} onChangeText={setCalories} placeholder="480" keyboardType="numeric" suffix="kcal" error={errors.calories} />
+                {/* Editable fields shown after estimation */}
+                {estimateReady && (
+                    <View style={styles.estimateResultCard}>
+                        <View style={styles.estimateResultHeader}>
+                            <Ionicons name="checkmark-circle" size={16} color={theme.colors.primary} />
+                            <Text style={styles.estimateResultTitle}>Nutrition Estimated — Edit if needed</Text>
+                        </View>
 
-                <Text style={styles.sectionLabel}>Macros (optional)</Text>
-                <View style={styles.macroRow}>
-                    <InputField label="Protein" value={protein} onChangeText={setProtein} placeholder="0" keyboardType="numeric" suffix="g" style={styles.macroInput} />
-                    <InputField label="Carbs" value={carbs} onChangeText={setCarbs} placeholder="0" keyboardType="numeric" suffix="g" style={styles.macroInput} />
-                    <InputField label="Fat" value={fat} onChangeText={setFat} placeholder="0" keyboardType="numeric" suffix="g" style={styles.macroInput} />
-                </View>
+                        <Text style={styles.fieldLabel}>Meal Name</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={aiName}
+                            onChangeText={setAiName}
+                            placeholder="Meal name"
+                            placeholderTextColor={theme.colors.textMuted}
+                        />
 
-                <View style={{ marginTop: 16, marginBottom: 40 }}>
-                    <PrimaryButton title="Log Meal" onPress={handleSave} />
-                </View>
+                        <Text style={styles.fieldLabel}>Calories</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={aiCalories}
+                            onChangeText={setAiCalories}
+                            placeholder="0 kcal"
+                            placeholderTextColor={theme.colors.textMuted}
+                            keyboardType="numeric"
+                        />
+
+                        <Text style={styles.fieldLabel}>Macros</Text>
+                        <View style={styles.macroRow}>
+                            <View style={styles.macroInputWrap}>
+                                <Text style={styles.macroInputLabel}>Protein (g)</Text>
+                                <TextInput
+                                    style={styles.macroInput}
+                                    value={aiProtein}
+                                    onChangeText={setAiProtein}
+                                    placeholder="0"
+                                    placeholderTextColor={theme.colors.textMuted}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                            <View style={styles.macroInputWrap}>
+                                <Text style={styles.macroInputLabel}>Carbs (g)</Text>
+                                <TextInput
+                                    style={styles.macroInput}
+                                    value={aiCarbs}
+                                    onChangeText={setAiCarbs}
+                                    placeholder="0"
+                                    placeholderTextColor={theme.colors.textMuted}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                            <View style={styles.macroInputWrap}>
+                                <Text style={styles.macroInputLabel}>Fat (g)</Text>
+                                <TextInput
+                                    style={styles.macroInput}
+                                    value={aiFat}
+                                    onChangeText={setAiFat}
+                                    placeholder="0"
+                                    placeholderTextColor={theme.colors.textMuted}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.logBtn, !canLogAI && styles.logBtnDisabled]}
+                            onPress={handleLogAI}
+                            disabled={!canLogAI}
+                        >
+                            <Ionicons name="add-circle" size={18} color="#fff" />
+                            <Text style={styles.logBtnText}>Log Food</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Manual Entry Dropdown */}
+                <TouchableOpacity
+                    style={styles.manualHeader}
+                    onPress={() => setManualOpen(!manualOpen)}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.manualHeaderLeft}>
+                        <Ionicons name="create-outline" size={18} color={theme.colors.primary} />
+                        <Text style={styles.manualTitle}>Manual Entry</Text>
+                    </View>
+                    <Ionicons
+                        name={manualOpen ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color={theme.colors.textMuted}
+                    />
+                </TouchableOpacity>
+
+                {manualOpen && (
+                    <View style={styles.manualBody}>
+                        <Text style={styles.fieldLabel}>Meal Name</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={manualName}
+                            onChangeText={setManualName}
+                            placeholder="e.g. Chicken Salad"
+                            placeholderTextColor={theme.colors.textMuted}
+                        />
+
+                        <Text style={styles.fieldLabel}>Calories</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={manualCalories}
+                            onChangeText={setManualCalories}
+                            placeholder="0 kcal"
+                            placeholderTextColor={theme.colors.textMuted}
+                            keyboardType="numeric"
+                        />
+
+                        <Text style={styles.fieldLabel}>Macros (optional)</Text>
+                        <View style={styles.macroRow}>
+                            <View style={styles.macroInputWrap}>
+                                <Text style={styles.macroInputLabel}>Protein (g)</Text>
+                                <TextInput
+                                    style={styles.macroInput}
+                                    value={manualProtein}
+                                    onChangeText={setManualProtein}
+                                    placeholder="0"
+                                    placeholderTextColor={theme.colors.textMuted}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                            <View style={styles.macroInputWrap}>
+                                <Text style={styles.macroInputLabel}>Carbs (g)</Text>
+                                <TextInput
+                                    style={styles.macroInput}
+                                    value={manualCarbs}
+                                    onChangeText={setManualCarbs}
+                                    placeholder="0"
+                                    placeholderTextColor={theme.colors.textMuted}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                            <View style={styles.macroInputWrap}>
+                                <Text style={styles.macroInputLabel}>Fat (g)</Text>
+                                <TextInput
+                                    style={styles.macroInput}
+                                    value={manualFat}
+                                    onChangeText={setManualFat}
+                                    placeholder="0"
+                                    placeholderTextColor={theme.colors.textMuted}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.logBtn, !canLogManual && styles.logBtnDisabled]}
+                            onPress={handleLogManual}
+                            disabled={!canLogManual}
+                        >
+                            <Ionicons name="add-circle" size={18} color="#fff" />
+                            <Text style={styles.logBtnText}>Log Food</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                <View style={{ height: 60 }} />
             </ScrollView>
         </KeyboardAvoidingView>
     );
@@ -310,8 +389,25 @@ const styles = StyleSheet.create({
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28,
     },
     title: { fontSize: 20, fontWeight: '700', color: theme.colors.textPrimary },
+
+    // Saved meals
+    savedSection: { marginBottom: 16 },
+    savedHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+    savedTitle: { fontSize: 14, fontWeight: '600', color: theme.colors.primary },
+    savedRow: { flexDirection: 'row', gap: 8, paddingRight: 20 },
+    savedCard: {
+        backgroundColor: theme.colors.surfaceContainerLowest,
+        borderRadius: theme.borderRadius.sm,
+        padding: 12, minWidth: 120,
+        borderWidth: 1, borderColor: theme.colors.outlineVariant,
+    },
+    savedCardName: { fontSize: 13, fontWeight: '700', color: theme.colors.textPrimary, marginBottom: 4 },
+    savedCardCal: { fontSize: 12, fontWeight: '600', color: theme.colors.primary },
+    savedCardMacro: { fontSize: 10, color: theme.colors.textMuted, marginTop: 2, fontWeight: '500' },
+
+    // Meal type
     fieldLabel: {
-        fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary,
+        fontSize: 12, fontWeight: '600', color: theme.colors.textSecondary,
         marginBottom: 8, letterSpacing: 0.3,
     },
     typeRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
@@ -324,6 +420,8 @@ const styles = StyleSheet.create({
     typeChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
     typeText: { fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary },
     typeTextActive: { color: '#fff' },
+
+    // AI describe section
     descSection: { marginBottom: 20 },
     descHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
     descTitle: { fontSize: 14, fontWeight: '600', color: theme.colors.primary },
@@ -342,56 +440,65 @@ const styles = StyleSheet.create({
     },
     estimateBtnDisabled: { opacity: 0.4 },
     estimateBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-    estimationCard: {
-        backgroundColor: theme.colors.surfaceContainerLowest,
-        borderRadius: theme.borderRadius.sm,
-        padding: 14, marginTop: 10,
-        borderWidth: 1, borderColor: theme.colors.primaryLight,
-    },
-    estimationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-    estimationMatch: { fontSize: 14, fontWeight: '700', color: theme.colors.textPrimary, flex: 1, marginRight: 8 },
-    sourceBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: theme.borderRadius.pill },
-    sourceText: { fontSize: 10, fontWeight: '700' },
-    estimationMacros: { flexDirection: 'row', gap: 6, marginBottom: 12 },
-    macroChip: {
-        flex: 1, backgroundColor: theme.colors.surfaceContainerLow,
-        borderRadius: theme.borderRadius.sm, padding: 8, alignItems: 'center',
-    },
-    macroChipLabel: { fontSize: 10, fontWeight: '600', color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
-    macroChipVal: { fontSize: 15, fontWeight: '800', color: theme.colors.textPrimary, marginTop: 2 },
-    applyBtn: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-        backgroundColor: theme.colors.primary, borderRadius: theme.borderRadius.sm,
-        paddingVertical: 10,
-    },
-    applyBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-    appliedRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    appliedText: { fontSize: 12, color: theme.colors.primary, fontWeight: '500' },
-    noMatch: { fontSize: 12, color: theme.colors.textMuted, marginTop: 8, textAlign: 'center' },
     aiErrorText: { fontSize: 11, color: '#d97706', marginTop: 6, fontWeight: '500' },
-    sectionLabel: {
-        fontSize: 15, fontWeight: '600', color: theme.colors.textPrimary, marginBottom: 8, marginTop: 8,
+
+    // Estimate result card
+    estimateResultCard: {
+        backgroundColor: theme.colors.surfaceContainerLow,
+        borderRadius: theme.borderRadius.md,
+        borderWidth: 1, borderColor: theme.colors.primaryLight,
+        padding: 16, marginBottom: 20,
     },
-    macroRow: { flexDirection: 'row', gap: 8 },
-    macroInput: { flex: 1 },
-    savedSection: { marginBottom: 16 },
-    savedHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-    savedTitle: { fontSize: 14, fontWeight: '600', color: theme.colors.primary },
-    savedRow: { flexDirection: 'row', gap: 8, paddingRight: 20 },
-    savedCard: {
+    estimateResultHeader: {
+        flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16,
+    },
+    estimateResultTitle: {
+        fontSize: 13, fontWeight: '600', color: theme.colors.primary,
+    },
+
+    // Shared inputs
+    input: {
         backgroundColor: theme.colors.surfaceContainerLowest,
         borderRadius: theme.borderRadius.sm,
-        padding: 12, minWidth: 120,
         borderWidth: 1, borderColor: theme.colors.outlineVariant,
+        paddingHorizontal: 14, paddingVertical: 11,
+        fontSize: 15, color: theme.colors.textPrimary, marginBottom: 14,
     },
-    savedCardName: { fontSize: 13, fontWeight: '700', color: theme.colors.textPrimary, marginBottom: 4 },
-    savedCardCal: { fontSize: 12, fontWeight: '600', color: theme.colors.primary },
-    savedCardMacro: { fontSize: 10, color: theme.colors.textMuted, marginTop: 2, fontWeight: '500' },
-    saveMealLink: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-        paddingVertical: 10, marginBottom: 16,
-        borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed',
+    macroRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+    macroInputWrap: { flex: 1 },
+    macroInputLabel: { fontSize: 11, fontWeight: '600', color: theme.colors.textSecondary, marginBottom: 6 },
+    macroInput: {
+        backgroundColor: theme.colors.surfaceContainerLowest,
         borderRadius: theme.borderRadius.sm,
+        borderWidth: 1, borderColor: theme.colors.outlineVariant,
+        paddingHorizontal: 10, paddingVertical: 10,
+        fontSize: 14, color: theme.colors.textPrimary, textAlign: 'center',
     },
-    saveMealLinkText: { fontSize: 13, fontWeight: '600', color: theme.colors.primary },
+
+    // Log button
+    logBtn: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+        backgroundColor: theme.colors.primary, borderRadius: theme.borderRadius.sm,
+        paddingVertical: 13, marginTop: 4,
+    },
+    logBtnDisabled: { opacity: 0.4 },
+    logBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+    // Manual Entry accordion
+    manualHeader: {
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        paddingVertical: 14, paddingHorizontal: 16,
+        backgroundColor: theme.colors.surfaceContainerLow,
+        borderRadius: theme.borderRadius.sm,
+        borderWidth: 1, borderColor: theme.colors.outlineVariant,
+        marginBottom: 0,
+    },
+    manualHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    manualTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.textPrimary },
+    manualBody: {
+        backgroundColor: theme.colors.surfaceContainerLow,
+        borderWidth: 1, borderTopWidth: 0, borderColor: theme.colors.outlineVariant,
+        borderBottomLeftRadius: theme.borderRadius.sm, borderBottomRightRadius: theme.borderRadius.sm,
+        padding: 16, marginBottom: 20,
+    },
 });

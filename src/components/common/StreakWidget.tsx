@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { theme } from '../../constants/theme';
 import { getToday } from '../../utils/dateHelpers';
 
@@ -12,14 +12,18 @@ function getShortMonth(monthIndex: number) {
     return months[monthIndex];
 }
 
+const screenWidth = Dimensions.get('window').width;
+const widgetWidth = screenWidth - 40; // 20 padding on each side of the container in HomeScreen
+const contentWidth = widgetWidth - 48; // 24 padding inside StreakWidget container
+
 export function StreakWidget({ completedDates }: StreakWidgetProps) {
     const todayStr = getToday();
     const today = new Date(todayStr);
 
-    // We want 3 months ending in the current month
+    // We want 3 months ending in the current month. Order: Current (0), Prev (1), Prev Prev (2)
     const monthsData = useMemo(() => {
         const data = [];
-        for (let i = 2; i >= 0; i--) {
+        for (let i = 0; i <= 2; i++) {
             const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
             const year = d.getFullYear();
             const month = d.getMonth();
@@ -44,9 +48,14 @@ export function StreakWidget({ completedDates }: StreakWidgetProps) {
 
     return (
         <View style={styles.container}>
-            <View style={styles.monthsRow}>
+            <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                style={styles.monthsScroll}
+            >
                 {monthsData.map((m, mIndex) => (
-                    <View key={mIndex} style={styles.monthBlock}>
+                    <View key={mIndex} style={[styles.monthBlock, { width: contentWidth }]}>
                         <Text style={styles.monthLabel}>{m.monthName}</Text>
                         <View style={styles.grid}>
                             {m.days.map((day, dIndex) => {
@@ -69,7 +78,7 @@ export function StreakWidget({ completedDates }: StreakWidgetProps) {
                         </View>
                     </View>
                 ))}
-            </View>
+            </ScrollView>
 
             <View style={styles.bottomSection}>
                 <View style={styles.circleGraphic}>
@@ -91,10 +100,7 @@ const styles = StyleSheet.create({
         padding: 24,
         marginBottom: 20,
     },
-    monthsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
+    monthsScroll: {
         marginBottom: 24,
     },
     monthBlock: {
@@ -110,18 +116,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'flex-start',
-        width: 84, // 7 items * 12px (6px width + 6px margin total)
+        width: 140, // 7 items * 20px (10px width + 10px margin total)
     },
     emptyDot: {
-        width: 6,
-        height: 6,
-        margin: 3,
+        width: 10,
+        height: 10,
+        margin: 5,
     },
     dot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        margin: 3,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        margin: 5,
     },
     dotInactive: {
         backgroundColor: theme.colors.surfaceContainerHighest,

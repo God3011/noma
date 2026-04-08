@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar,
+    View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -99,23 +99,26 @@ export function FoodLogScreen() {
                 </View>
 
                 {/* Meal Sections */}
-                {MEAL_SECTIONS.map(({ type, label }) => {
-                    const sectionMeals = dayMeals.filter((m) => m.meal_type === type);
-                    return (
-                        <View key={type} style={styles.mealSection}>
-                            <Text style={styles.mealSectionTitle}>{label}</Text>
-                            {sectionMeals.length === 0 ? (
-                                <View style={styles.emptySection}>
-                                    <Text style={styles.emptyText}>No {label.toLowerCase()} logged</Text>
-                                </View>
-                            ) : (
-                                sectionMeals.map((meal) => (
+                {dayMeals.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <Ionicons name="restaurant-outline" size={48} color={theme.colors.surfaceContainerHigh} />
+                        <Text style={styles.emptyTitle}>No meals yet</Text>
+                        <Text style={styles.emptyStateText}>Tap + to log your first meal of the day</Text>
+                    </View>
+                ) : (
+                    MEAL_SECTIONS.map(({ type, label }) => {
+                        const sectionMeals = dayMeals.filter((m) => m.meal_type === type);
+                        if (sectionMeals.length === 0) return null;
+                        return (
+                            <View key={type} style={styles.mealSection}>
+                                <Text style={styles.mealSectionTitle}>{label}</Text>
+                                {sectionMeals.map((meal) => (
                                     <MealItem key={meal.id} meal={meal} onDelete={deleteMeal} />
-                                ))
-                            )}
-                        </View>
-                    );
-                })}
+                                ))}
+                            </View>
+                        );
+                    })
+                )}
 
                 <View style={{ height: 120 }} />
             </ScrollView>
@@ -219,6 +222,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: { fontSize: 13, color: theme.colors.textMuted },
+    emptyState: { alignItems: 'center', paddingVertical: 48, gap: 8 },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.textSecondary },
+    emptyStateText: { fontSize: 14, color: theme.colors.textMuted },
     fab: { position: 'absolute', bottom: 100, right: 20, zIndex: 10 },
     fabGradient: {
         width: 56, height: 56, borderRadius: 28,

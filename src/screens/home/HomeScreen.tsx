@@ -162,8 +162,7 @@ export function HomeScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll}>
                     <View style={styles.statsRow}>
                         <StatCard
-                            icon="barbell-outline"
-                            iconColor="#505f76"
+                            imageIcon={require('../../../assets/protein-icon.png')}
                             label="Protein"
                             value={`${totalProtein}g`}
                         />
@@ -179,6 +178,12 @@ export function HomeScreen() {
                             label="Steps"
                             value={`${todaySteps.toLocaleString()}`}
                             onPress={() => { setStepsInput(todaySteps > 0 ? todaySteps.toString() : ''); setEditingSteps(true); }}
+                        />
+                        <StatCard
+                            icon="person-circle-outline"
+                            iconColor="#a78bfa"
+                            label="Avatar"
+                            value="—"
                         />
                     </View>
                 </ScrollView>
@@ -280,22 +285,6 @@ export function HomeScreen() {
 
                 <View style={{ height: 120 }} />
             </ScrollView>
-
-            {/* FAB */}
-            <TouchableOpacity
-                style={styles.fab}
-                onPress={showActionSheet}
-                activeOpacity={0.85}
-            >
-                <LinearGradient
-                    colors={['#006c49', '#10b981']}
-                    style={styles.fabGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                >
-                    <Ionicons name="add" size={28} color="#fff" />
-                </LinearGradient>
-            </TouchableOpacity>
         </View>
     );
 }
@@ -404,12 +393,4 @@ const styles = StyleSheet.create({
         borderRadius: theme.borderRadius.sm, padding: 24, alignItems: 'center', marginBottom: 8,
     },
     emptyText: { fontSize: 14, color: theme.colors.textMuted },
-    // FAB
-    fab: { position: 'absolute', bottom: 100, right: 20, zIndex: 10 },
-    fabGradient: {
-        width: 56, height: 56, borderRadius: 28,
-        alignItems: 'center', justifyContent: 'center',
-        shadowColor: '#006c49', shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
-    },
 });
