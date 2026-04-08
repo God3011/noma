@@ -28,7 +28,7 @@ const RATING_BG: Record<string, string> = {
 };
 
 const HoverBubble = ({ label, value, unit, color, maxVal, delay = 0 }: any) => {
-    const safeValue = isNaN(value) ? 0 : value;
+    const safeValue = (value == null || isNaN(value)) ? 0 : Number(value);
     const ratio = Math.max(0.15, Math.min(1, Math.sqrt(Math.max(0, safeValue) / maxVal)));
     const size = 65 + ratio * 60;
 
@@ -62,12 +62,12 @@ const HoverBubble = ({ label, value, unit, color, maxVal, delay = 0 }: any) => {
         <Animated.View key={label} style={{
             width: size, height: size, borderRadius: size / 2,
             backgroundColor: color, alignItems: 'center', justifyContent: 'center',
-            margin: 8, shadowColor: color, shadowOffset: { width: 0, height: 6 },
+            margin: 4, shadowColor: color, shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.5, shadowRadius: 10, elevation: 6,
             transform: [{ translateY }]
         }}>
-            <Text style={{ color: '#fff', fontSize: size > 90 ? 18 : 13, fontWeight: '800' }}>{Math.round(safeValue)}{unit}</Text>
-            {size > 75 && <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: '600', marginTop: 2 }} numberOfLines={1}>{label}</Text>}
+            <Text style={{ color: '#fff', fontSize: size > 90 ? 16 : 12, fontWeight: '800' }}>{Math.round(safeValue)}{unit}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: size > 90 ? 11 : 9, fontWeight: '600', marginTop: 1 }} numberOfLines={1}>{label}</Text>
         </Animated.View>
     );
 };
@@ -135,13 +135,13 @@ export default function ProductResultScreen() {
                 <View style={styles.fullScreenBubbles}>
                     <Text style={styles.bubblesHeaderTitle}>Nutrition Profile</Text>
                     <View style={styles.bubblesContainer}>
-                        <HoverBubble label="Calories" value={n.calories_per_100g} unit="kcal" color={theme.colors.secondaryContainer} maxVal={500} delay={0} />
-                        <HoverBubble label="Carbs" value={n.carbs_g} unit="g" color={theme.colors.tertiary} maxVal={100} delay={200} />
-                        <HoverBubble label="Protein" value={n.protein_g} unit="g" color={theme.colors.primary} maxVal={100} delay={400} />
-                        <HoverBubble label="Fat" value={n.fat_g} unit="g" color={theme.colors.outline} maxVal={100} delay={100} />
-                        <HoverBubble label="Sugar" value={n.sugar_g} unit="g" color={theme.colors.danger} maxVal={50} delay={500} />
-                        <HoverBubble label="Sodium" value={n.sodium_mg} unit="mg" color={theme.colors.onSurfaceVariant} maxVal={1500} delay={300} />
-                        <HoverBubble label="Fiber" value={n.fiber_g} unit="g" color={theme.colors.success} maxVal={30} delay={600} />
+                        {(n.calories_per_100g > 0) && <HoverBubble label="Calories" value={n.calories_per_100g} unit="kcal" color={theme.colors.secondaryContainer} maxVal={500} delay={0} />}
+                        {(Number(n.carbs_g) > 0) && <HoverBubble label="Carbs" value={n.carbs_g} unit="g" color={theme.colors.tertiary} maxVal={100} delay={200} />}
+                        {(Number(n.protein_g) > 0) && <HoverBubble label="Protein" value={n.protein_g} unit="g" color={theme.colors.primary} maxVal={100} delay={400} />}
+                        {(Number(n.fat_g) > 0) && <HoverBubble label="Fat" value={n.fat_g} unit="g" color={theme.colors.outline} maxVal={100} delay={100} />}
+                        {(Number(n.sugar_g) > 0) && <HoverBubble label="Sugar" value={n.sugar_g} unit="g" color={theme.colors.danger} maxVal={50} delay={500} />}
+                        {(Number(n.sodium_mg) > 0) && <HoverBubble label="Sodium" value={n.sodium_mg} unit="mg" color={theme.colors.onSurfaceVariant} maxVal={1500} delay={300} />}
+                        {(Number(n.fiber_g) > 0) && <HoverBubble label="Fiber" value={n.fiber_g} unit="g" color={theme.colors.success} maxVal={30} delay={600} />}
                     </View>
                 </View>
 
