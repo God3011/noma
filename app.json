@@ -27,7 +27,9 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.health.READ_STEPS"
+        "android.permission.health.READ_STEPS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -40,6 +42,12 @@
           "cameraPermission": "Allow NOMA to access your camera to scan food barcodes."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d7c03a9d-8ebd-4771-899c-04394eb8a6d6"
+      }
+    },
+    "owner": "shanmukh30"
   }
 }
