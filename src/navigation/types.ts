@@ -17,7 +17,7 @@ export type RootStackParamList = {
     Onboarding: undefined;
     Main: undefined;
     AddMeal: undefined;
-    AddWorkout: undefined;
+    AddWorkout: { presetMode?: boolean } | undefined;
     SaveMeal: undefined;
     Account: undefined;
 };

@@ -13,6 +13,7 @@ import { useFoodLogStore } from '../../store/useFoodLogStore';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { getDailyScore } from '../../store/useDailyRatingStore';
 import { useDailyStepsStore } from '../../store/useDailyStepsStore';
+import { fetchTodaySteps } from '../../services/healthService';
 import { useTodoStore, TodoItem } from '../../store/useTodoStore';
 import { DailyRatingMeter } from '../../components/common/DailyRatingMeter';
 import { StatCard } from '../../components/common/StatCard';
@@ -30,19 +31,25 @@ export function HomeScreen() {
     const meals = useFoodLogStore((s) => s.meals);
     const workouts = useWorkoutStore((s) => s.workouts);
 
-    const [score, setScore] = useState(getDailyScore(getToday()));
-
-    useFocusEffect(
-        useCallback(() => {
-            setScore(getDailyScore(getToday()));
-        }, [meals, workouts])
-    );
-
     const today = getToday();
     const todayMeals = meals.filter((m) => m.date === today);
     const todayWorkouts = workouts.filter((w) => w.date === today);
     const todaySteps = useDailyStepsStore((s) => s.getSteps(today));
     const setSteps = useDailyStepsStore((s) => s.setSteps);
+    const healthSyncEnabled = useDailyStepsStore((s) => s.healthSyncEnabled);
+
+    const [score, setScore] = useState(getDailyScore(getToday()));
+
+    useFocusEffect(
+        useCallback(() => {
+            setScore(getDailyScore(getToday()));
+            if (healthSyncEnabled) {
+                fetchTodaySteps().then((steps) => {
+                    if (steps > 0) setSteps(getToday(), steps);
+                });
+            }
+        }, [meals, workouts, healthSyncEnabled])
+    );
     const [editingSteps, setEditingSteps] = useState(false);
     const [stepsInput, setStepsInput] = useState('');
 

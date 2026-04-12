@@ -25,3 +25,10 @@ export interface WorkoutEntry {
     sets?: WorkoutSet[];
     duration_minutes?: number;
 }
+
+export interface WorkoutPreset {
+    id: string;
+    name: string;
+    exercises: Exercise[]; // template — reps set, weights filled at use-time
+    created_at: string;
+}

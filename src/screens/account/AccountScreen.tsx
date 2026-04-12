@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    StatusBar, TextInput, Platform,
+    StatusBar, TextInput, Platform, Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/useUserStore';
+import { useDailyStepsStore } from '../../store/useDailyStepsStore';
 import { calculateBMR, calculateTDEE } from '../../utils/calorieCalculator';
 import { theme } from '../../constants/theme';
 import { UserProfile, CaloriePlan } from '../../types/user';
+import {
+    requestHealthPermissions,
+    fetchTodaySteps,
+    getSupportedHealthPlatform,
+} from '../../services/healthService';
+import { getToday } from '../../utils/dateHelpers';
 
 // ─── Conversion helpers ───────────────────────────────────────────────────────
 
@@ -108,10 +115,44 @@ export function AccountScreen() {
     const setProfile = useUserStore((s) => s.setProfile);
     const setPlan = useUserStore((s) => s.setPlan);
 
+    const healthSyncEnabled = useDailyStepsStore((s) => s.healthSyncEnabled);
+    const setHealthSyncEnabled = useDailyStepsStore((s) => s.setHealthSyncEnabled);
+    const setSteps = useDailyStepsStore((s) => s.setSteps);
+
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState('');
-    const [healthConnected, setHealthConnected] = useState(true);
-    const [fitConnected, setFitConnected] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+
+    const supportedPlatform = getSupportedHealthPlatform();
+    // On iOS show Apple Health; on Android show Google Fit
+    const healthConnected = healthSyncEnabled && supportedPlatform !== 'none';
+
+    const handleHealthConnect = async () => {
+        if (healthConnected) {
+            setHealthSyncEnabled(false);
+            return;
+        }
+        if (supportedPlatform === 'none') {
+            Alert.alert('Not Supported', 'Health integration is not available on this device.');
+            return;
+        }
+        setSyncing(true);
+        const granted = await requestHealthPermissions(supportedPlatform);
+        if (granted) {
+            setHealthSyncEnabled(true);
+            const steps = await fetchTodaySteps();
+            if (steps > 0) setSteps(getToday(), steps);
+            Alert.alert('Connected', 'Step count will now sync automatically.');
+        } else {
+            Alert.alert(
+                'Permission Denied',
+                supportedPlatform === 'apple'
+                    ? 'Please allow NOMA to access Health in Settings > Privacy & Security > Health > NOMA.'
+                    : 'Please allow NOMA to access Health Connect data in the Health Connect app.'
+            );
+        }
+        setSyncing(false);
+    };
 
     const isImperial = profile?.unit_preference === 'imperial';
 
@@ -370,42 +411,52 @@ export function AccountScreen() {
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Health Integrations</Text>
 
-                    <View style={rowStyles.wrap}>
-                        <View style={rowStyles.left}>
-                            <Ionicons name="fitness" size={20} color={theme.colors.textPrimary} />
-                            <View>
-                                <Text style={rowStyles.label}>Apple Health</Text>
-                                <Text style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>Sync steps automatically</Text>
+                    {/* Show only the relevant platform row */}
+                    {(supportedPlatform === 'apple' || supportedPlatform === 'none') && (
+                        <View style={rowStyles.wrap}>
+                            <View style={rowStyles.left}>
+                                <Ionicons name="fitness" size={20} color={theme.colors.textPrimary} />
+                                <View>
+                                    <Text style={rowStyles.label}>Apple Health</Text>
+                                    <Text style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>
+                                        {healthConnected ? 'Syncing steps automatically' : 'Sync steps automatically'}
+                                    </Text>
+                                </View>
                             </View>
+                            <TouchableOpacity
+                                style={[styles.syncBtn, healthConnected && { backgroundColor: theme.colors.primaryContainer }]}
+                                onPress={handleHealthConnect}
+                                disabled={syncing}
+                            >
+                                <Text style={[styles.syncBtnText, healthConnected && { color: theme.colors.primary }]}>
+                                    {syncing ? '...' : healthConnected ? 'Connected' : 'Connect'}
+                                </Text>
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                            style={[styles.syncBtn, healthConnected && { backgroundColor: theme.colors.primaryContainer }]}
-                            onPress={() => setHealthConnected(!healthConnected)}
-                        >
-                            <Text style={[styles.syncBtnText, healthConnected && { color: theme.colors.primary }]}>
-                                {healthConnected ? 'Connected' : 'Connect'}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                    <View style={styles.divider} />
+                    )}
 
-                    <View style={rowStyles.wrap}>
-                        <View style={rowStyles.left}>
-                            <Ionicons name="pulse" size={20} color={theme.colors.textPrimary} />
-                            <View>
-                                <Text style={rowStyles.label}>Google Fit</Text>
-                                <Text style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>Sync steps automatically</Text>
+                    {supportedPlatform === 'google' && (
+                        <View style={rowStyles.wrap}>
+                            <View style={rowStyles.left}>
+                                <Ionicons name="pulse" size={20} color={theme.colors.textPrimary} />
+                                <View>
+                                    <Text style={rowStyles.label}>Google Health Connect</Text>
+                                    <Text style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>
+                                        {healthConnected ? 'Syncing steps automatically' : 'Sync steps automatically'}
+                                    </Text>
+                                </View>
                             </View>
+                            <TouchableOpacity
+                                style={[styles.syncBtn, healthConnected && { backgroundColor: theme.colors.primaryContainer }]}
+                                onPress={handleHealthConnect}
+                                disabled={syncing}
+                            >
+                                <Text style={[styles.syncBtnText, healthConnected && { color: theme.colors.primary }]}>
+                                    {syncing ? '...' : healthConnected ? 'Connected' : 'Connect'}
+                                </Text>
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                            style={[styles.syncBtn, fitConnected && { backgroundColor: theme.colors.primaryContainer }]}
-                            onPress={() => setFitConnected(!fitConnected)}
-                        >
-                            <Text style={[styles.syncBtnText, fitConnected && { color: theme.colors.primary }]}>
-                                {fitConnected ? 'Connected' : 'Connect'}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
+                    )}
                 </View>
 
                 {/* Plan */}

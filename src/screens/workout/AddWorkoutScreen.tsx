@@ -3,31 +3,43 @@ import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     StatusBar, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { generateId } from '../../utils/generateId';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
+import { useWorkoutPresetStore } from '../../store/useWorkoutPresetStore';
 import { InputField } from '../../components/common/InputField';
 import { PrimaryButton } from '../../components/common/PrimaryButton';
 import { getToday } from '../../utils/dateHelpers';
 import { WORKOUT_TYPES, WORKOUT_CATEGORIES } from '../../constants/workoutTypes';
-import { WorkoutCategory, WorkoutSet, Exercise } from '../../types/workout';
+import { WorkoutCategory, Exercise } from '../../types/workout';
+import { RootStackParamList } from '../../navigation/types';
 import { theme } from '../../constants/theme';
+
+type AddWorkoutRoute = RouteProp<RootStackParamList, 'AddWorkout'>;
+
+// Store reps/weight as raw strings so decimal input (e.g. "80.5") works correctly
+interface SetForm {
+    repsStr: string;
+    weightStr: string;
+}
 
 interface ExerciseForm {
     name: string;
     category: WorkoutCategory;
     customName: string;
-    sets: WorkoutSet[];
+    sets: SetForm[];
     duration: string;
     speed: string;
 }
+
+const emptySet = (): SetForm => ({ repsStr: '', weightStr: '' });
 
 const emptyExercise = (): ExerciseForm => ({
     name: '',
     category: 'strength',
     customName: '',
-    sets: [{ reps: 0 }],
+    sets: [emptySet()],
     duration: '',
     speed: '',
 });
@@ -36,10 +48,15 @@ const isTimeBased = (cat: WorkoutCategory) => cat === 'cardio' || cat === 'sport
 
 export function AddWorkoutScreen() {
     const navigation = useNavigation();
+    const route = useRoute<AddWorkoutRoute>();
+    const presetMode = route.params?.presetMode ?? false;
+
     const addWorkout = useWorkoutStore((s) => s.addWorkout);
+    const addPreset = useWorkoutPresetStore((s) => s.addPreset);
 
     const [exercises, setExercises] = useState<ExerciseForm[]>([emptyExercise()]);
     const [notes, setNotes] = useState('');
+    const [presetName, setPresetName] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     // --- Exercise helpers ---
@@ -55,7 +72,7 @@ export function AddWorkoutScreen() {
     // --- Set helpers ---
     const addSet = (exIdx: number) => {
         const updated = [...exercises];
-        updated[exIdx].sets = [...updated[exIdx].sets, { reps: 0 }];
+        updated[exIdx].sets = [...updated[exIdx].sets, emptySet()];
         setExercises(updated);
     };
     const removeSet = (exIdx: number, setIdx: number) => {
@@ -63,24 +80,25 @@ export function AddWorkoutScreen() {
         updated[exIdx].sets = updated[exIdx].sets.filter((_, i) => i !== setIdx);
         setExercises(updated);
     };
-    const updateSet = (exIdx: number, setIdx: number, field: keyof WorkoutSet, val: string) => {
+    const updateSet = (exIdx: number, setIdx: number, field: 'repsStr' | 'weightStr', val: string) => {
         const updated = [...exercises];
-        const parsed = field === 'weight_kg' ? (parseFloat(val) || 0) : (parseInt(val) || 0);
-        updated[exIdx].sets[setIdx] = { ...updated[exIdx].sets[setIdx], [field]: parsed };
+        updated[exIdx].sets[setIdx] = { ...updated[exIdx].sets[setIdx], [field]: val };
         setExercises(updated);
     };
 
-    const handleSave = () => {
+    // --- Build validated exercises ---
+    const buildExercises = (): { exercises: Exercise[]; errs: Record<string, string> } => {
         const errs: Record<string, string> = {};
-
         const builtExercises: Exercise[] = [];
+
         exercises.forEach((ex, i) => {
-            const finalName = ex.name === '__custom__' || ex.category === 'other' ? ex.customName.trim() : ex.name;
+            const finalName = ex.name === '__custom__' || ex.category === 'other'
+                ? ex.customName.trim()
+                : ex.name;
             if (!finalName) {
                 errs[`ex${i}`] = 'Select or enter an exercise';
                 return;
             }
-
             if (isTimeBased(ex.category)) {
                 if (!ex.duration || parseInt(ex.duration) <= 0) {
                     errs[`ex${i}_dur`] = 'Enter duration';
@@ -94,7 +112,9 @@ export function AddWorkoutScreen() {
                     speed_kmh: parseFloat(ex.speed) || undefined,
                 });
             } else {
-                const validSets = ex.sets.filter((s) => s.reps > 0);
+                const validSets = ex.sets
+                    .map((s) => ({ reps: parseInt(s.repsStr) || 0, weight_kg: parseFloat(s.weightStr) || undefined }))
+                    .filter((s) => s.reps > 0);
                 const hasDur = parseInt(ex.duration) > 0;
                 if (validSets.length === 0 && !hasDur) {
                     errs[`ex${i}_sets`] = 'Add sets or duration';
@@ -108,6 +128,12 @@ export function AddWorkoutScreen() {
                 });
             }
         });
+
+        return { exercises: builtExercises, errs };
+    };
+
+    const handleSave = () => {
+        const { exercises: builtExercises, errs } = buildExercises();
 
         if (builtExercises.length === 0 && Object.keys(errs).length === 0) {
             errs.general = 'Add at least one exercise';
@@ -125,6 +151,30 @@ export function AddWorkoutScreen() {
         navigation.goBack();
     };
 
+    const handleSavePreset = () => {
+        const errs: Record<string, string> = {};
+        if (!presetName.trim()) {
+            errs.presetName = 'Enter a name for this preset';
+        }
+
+        const { exercises: builtExercises, errs: exErrs } = buildExercises();
+        Object.assign(errs, exErrs);
+
+        if (builtExercises.length === 0 && !exErrs.general) {
+            errs.general = 'Add at least one exercise';
+        }
+        setErrors(errs);
+        if (Object.keys(errs).length > 0) return;
+
+        addPreset({
+            id: generateId(),
+            name: presetName.trim(),
+            exercises: builtExercises,
+            created_at: new Date().toISOString(),
+        });
+        navigation.goBack();
+    };
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -137,9 +187,21 @@ export function AddWorkoutScreen() {
                     <TouchableOpacity onPress={() => navigation.goBack()}>
                         <Ionicons name="close" size={28} color={theme.colors.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={styles.title}>Log Workout</Text>
+                    <Text style={styles.title}>{presetMode ? 'Create Preset' : 'Log Workout'}</Text>
                     <View style={{ width: 28 }} />
                 </View>
+
+                {/* Preset name field */}
+                {presetMode && (
+                    <InputField
+                        label="Preset Name"
+                        value={presetName}
+                        onChangeText={setPresetName}
+                        placeholder="e.g. Push Day, Upper Body..."
+                        error={errors.presetName}
+                    />
+                )}
+
                 {errors.general ? <Text style={styles.errorText}>{errors.general}</Text> : null}
 
                 {/* Exercise Cards */}
@@ -255,16 +317,16 @@ export function AddWorkoutScreen() {
                                             <Text style={styles.setNum}>{sIdx + 1}</Text>
                                             <InputField
                                                 label="Reps"
-                                                value={s.reps > 0 ? s.reps.toString() : ''}
-                                                onChangeText={(v) => updateSet(exIdx, sIdx, 'reps', v)}
+                                                value={s.repsStr}
+                                                onChangeText={(v) => updateSet(exIdx, sIdx, 'repsStr', v)}
                                                 placeholder="10"
                                                 keyboardType="numeric"
                                                 style={styles.setInput}
                                             />
                                             <InputField
                                                 label="Weight"
-                                                value={s.weight_kg ? s.weight_kg.toString() : ''}
-                                                onChangeText={(v) => updateSet(exIdx, sIdx, 'weight_kg', v)}
+                                                value={s.weightStr}
+                                                onChangeText={(v) => updateSet(exIdx, sIdx, 'weightStr', v)}
                                                 placeholder="—"
                                                 keyboardType="decimal-pad"
                                                 suffix="kg"
@@ -297,16 +359,21 @@ export function AddWorkoutScreen() {
                     <Text style={styles.addExerciseText}>Add Another Exercise</Text>
                 </TouchableOpacity>
 
-                <InputField
-                    label="Notes (optional)"
-                    value={notes}
-                    onChangeText={setNotes}
-                    placeholder="How did the session go?"
-                    multiline
-                />
+                {!presetMode && (
+                    <InputField
+                        label="Notes (optional)"
+                        value={notes}
+                        onChangeText={setNotes}
+                        placeholder="How did the session go?"
+                        multiline
+                    />
+                )}
 
                 <View style={{ marginTop: 16, marginBottom: 40 }}>
-                    <PrimaryButton title="Log Workout" onPress={handleSave} />
+                    <PrimaryButton
+                        title={presetMode ? 'Save Preset' : 'Log Workout'}
+                        onPress={presetMode ? handleSavePreset : handleSave}
+                    />
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
