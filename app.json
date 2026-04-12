@@ -49,6 +49,16 @@
         {
           "allowBackup": false
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
+          }
+        }
       ]
     ],
     "extra": {
