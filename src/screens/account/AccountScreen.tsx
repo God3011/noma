@@ -14,6 +14,7 @@ import {
     requestHealthPermissions,
     fetchTodaySteps,
     getSupportedHealthPlatform,
+    openHealthConnectPlayStore,
 } from '../../services/healthService';
 import { getToday } from '../../utils/dateHelpers';
 
@@ -137,18 +138,27 @@ export function AccountScreen() {
             return;
         }
         setSyncing(true);
-        const granted = await requestHealthPermissions(supportedPlatform);
-        if (granted) {
+        const result = await requestHealthPermissions(supportedPlatform);
+        if (result === 'granted') {
             setHealthSyncEnabled(true);
             const steps = await fetchTodaySteps();
             if (steps > 0) setSteps(getToday(), steps);
             Alert.alert('Connected', 'Step count will now sync automatically.');
+        } else if (result === 'not_installed') {
+            Alert.alert(
+                'Health Connect Not Installed',
+                'NOMA needs the Health Connect app to sync steps on Android. Install it from the Play Store.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Install', onPress: openHealthConnectPlayStore },
+                ]
+            );
         } else {
             Alert.alert(
                 'Permission Denied',
                 supportedPlatform === 'apple'
                     ? 'Please allow NOMA to access Health in Settings > Privacy & Security > Health > NOMA.'
-                    : 'Please allow NOMA to access Health Connect data in the Health Connect app.'
+                    : 'Open the Health Connect app, go to App permissions, and allow NOMA to read Steps.'
             );
         }
         setSyncing(false);

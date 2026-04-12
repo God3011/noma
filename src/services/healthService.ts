@@ -5,11 +5,14 @@
  * for fetching today's step count.
  */
 
-import { Platform } from 'react-native';
+import { Platform, Linking } from 'react-native';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type HealthPlatform = 'apple' | 'google' | 'none';
+
+/** 'granted' | 'denied' | 'not_installed' (Health Connect not on device) */
+export type HealthPermissionResult = 'granted' | 'denied' | 'not_installed';
 
 function getStartOfToday(): Date {
     const d = new Date();
@@ -25,7 +28,7 @@ function getEndOfToday(): Date {
 
 // ─── Apple HealthKit (iOS) ────────────────────────────────────────────────────
 
-async function requestAppleHealthPermissions(): Promise<boolean> {
+async function requestAppleHealthPermissions(): Promise<HealthPermissionResult> {
     try {
         const AppleHealthKit = require('react-native-health').default;
         const { Permissions } = require('react-native-health').default.Constants;
@@ -39,11 +42,11 @@ async function requestAppleHealthPermissions(): Promise<boolean> {
 
         return new Promise((resolve) => {
             AppleHealthKit.initHealthKit(permissions, (err: string) => {
-                resolve(!err);
+                resolve(err ? 'denied' : 'granted');
             });
         });
     } catch {
-        return false;
+        return 'denied';
     }
 }
 
@@ -56,11 +59,7 @@ async function fetchAppleHealthSteps(): Promise<number> {
             AppleHealthKit.getStepCount(
                 { date: startOfToday.toISOString(), includeManuallyAdded: true },
                 (err: string, result: { value: number }) => {
-                    if (err || !result) {
-                        resolve(0);
-                    } else {
-                        resolve(Math.round(result.value));
-                    }
+                    resolve(!err && result ? Math.round(result.value) : 0);
                 }
             );
         });
@@ -71,7 +70,7 @@ async function fetchAppleHealthSteps(): Promise<number> {
 
 // ─── Google Health Connect (Android) ─────────────────────────────────────────
 
-async function requestGoogleHealthPermissions(): Promise<boolean> {
+async function requestGoogleHealthPermissions(): Promise<HealthPermissionResult> {
     try {
         const {
             initialize,
@@ -81,17 +80,24 @@ async function requestGoogleHealthPermissions(): Promise<boolean> {
         } = require('react-native-health-connect');
 
         const status = await getSdkStatus();
-        if (status !== SdkAvailabilityStatus.SDK_AVAILABLE) {
-            return false;
+
+        // SDK not installed — Health Connect app is missing from the device
+        if (status === SdkAvailabilityStatus.SDK_UNAVAILABLE) {
+            return 'not_installed';
+        }
+
+        // SDK needs an update to Health Connect
+        if (status === SdkAvailabilityStatus.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED) {
+            return 'not_installed';
         }
 
         await initialize();
         const granted = await requestPermission([
             { accessType: 'read', recordType: 'Steps' },
         ]);
-        return Array.isArray(granted) && granted.length > 0;
+        return Array.isArray(granted) && granted.length > 0 ? 'granted' : 'denied';
     } catch {
-        return false;
+        return 'denied';
     }
 }
 
@@ -109,11 +115,7 @@ async function fetchGoogleHealthSteps(): Promise<number> {
         const endTime = getEndOfToday().toISOString();
 
         const { records } = await readRecords('Steps', {
-            timeRangeFilter: {
-                operator: 'between',
-                startTime,
-                endTime,
-            },
+            timeRangeFilter: { operator: 'between', startTime, endTime },
         });
 
         return records.reduce(
@@ -128,37 +130,43 @@ async function fetchGoogleHealthSteps(): Promise<number> {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Request permissions from whichever health platform is appropriate.
- * Returns true if permissions were granted.
+ * Request permissions from the appropriate health platform.
+ * Returns 'granted', 'denied', or 'not_installed'.
  */
 export async function requestHealthPermissions(
     platform: HealthPlatform
-): Promise<boolean> {
+): Promise<HealthPermissionResult> {
     if (platform === 'apple' && Platform.OS === 'ios') {
         return requestAppleHealthPermissions();
     }
     if (platform === 'google' && Platform.OS === 'android') {
         return requestGoogleHealthPermissions();
     }
-    return false;
+    return 'denied';
+}
+
+/**
+ * Opens the Play Store page to install / update Health Connect.
+ */
+export function openHealthConnectPlayStore() {
+    Linking.openURL(
+        'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata'
+    ).catch(() => {
+        Linking.openURL('market://details?id=com.google.android.apps.healthdata');
+    });
 }
 
 /**
  * Fetch today's step count from the active health platform.
- * Returns 0 on any error or if unsupported.
  */
 export async function fetchTodaySteps(): Promise<number> {
-    if (Platform.OS === 'ios') {
-        return fetchAppleHealthSteps();
-    }
-    if (Platform.OS === 'android') {
-        return fetchGoogleHealthSteps();
-    }
+    if (Platform.OS === 'ios') return fetchAppleHealthSteps();
+    if (Platform.OS === 'android') return fetchGoogleHealthSteps();
     return 0;
 }
 
 /**
- * Returns which health platform is supported on the current device.
+ * Returns which health platform is relevant for the current device.
  */
 export function getSupportedHealthPlatform(): HealthPlatform {
     if (Platform.OS === 'ios') return 'apple';
