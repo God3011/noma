@@ -21,6 +21,7 @@
     },
     "android": {
       "package": "com.shanmukh30.noma",
+      "minSdkVersion": 26,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -41,6 +42,12 @@
         "expo-camera",
         {
           "cameraPermission": "Allow NOMA to access your camera to scan food barcodes."
+        }
+      ],
+      [
+        "react-native-health-connect",
+        {
+          "allowBackup": false
         }
       ]
     ],
