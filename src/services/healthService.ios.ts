@@ -3,10 +3,21 @@
  * Metro automatically uses this file on iOS builds.
  */
 
-import { Linking } from 'react-native';
+import { Alert } from 'react-native';
+
+// react-native-health uses module.exports so must be required, not imported
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const AppleHealthKit = require('react-native-health');
 
 export type HealthPlatform = 'apple' | 'google' | 'none';
 export type HealthPermissionResult = 'granted' | 'denied' | 'not_installed';
+
+const PERMISSIONS = {
+    permissions: {
+        read: [AppleHealthKit.Constants.Permissions.StepCount],
+        write: [],
+    },
+};
 
 function getStartOfToday(): Date {
     const d = new Date();
@@ -18,38 +29,26 @@ export async function requestHealthPermissions(
     _platform: HealthPlatform
 ): Promise<HealthPermissionResult> {
     try {
-        const AppleHealthKit = require('react-native-health').default;
-        const { Permissions } = AppleHealthKit.Constants;
-
-        const permissions = {
-            permissions: {
-                read: [Permissions.StepCount],
-                write: [],
-            },
-        };
-
-        return new Promise((resolve) => {
-            AppleHealthKit.initHealthKit(permissions, (err: string) => {
+        return await new Promise((resolve) => {
+            AppleHealthKit.initHealthKit(PERMISSIONS, (err: string) => {
                 resolve(err ? 'denied' : 'granted');
             });
         });
-    } catch {
+    } catch (e: any) {
+        Alert.alert('HealthKit Error', e?.message ?? String(e));
         return 'denied';
     }
 }
 
 export function openHealthConnectPlayStore() {
-    // Not applicable on iOS — no-op
+    // Not applicable on iOS
 }
 
 export async function fetchTodaySteps(): Promise<number> {
     try {
-        const AppleHealthKit = require('react-native-health').default;
-        const startOfToday = getStartOfToday();
-
-        return new Promise((resolve) => {
+        return await new Promise((resolve) => {
             AppleHealthKit.getStepCount(
-                { date: startOfToday.toISOString(), includeManuallyAdded: true },
+                { date: getStartOfToday().toISOString(), includeManuallyAdded: true },
                 (err: string, result: { value: number }) => {
                     resolve(!err && result ? Math.round(result.value) : 0);
                 }

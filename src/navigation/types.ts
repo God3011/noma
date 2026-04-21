@@ -10,14 +10,14 @@ export type MainTabParamList = {
     FoodLog: undefined;
     Workout: undefined;
     FoodRating: undefined;
-    Skincare: undefined;
+    Insights: undefined;
 };
 
 export type RootStackParamList = {
     Onboarding: undefined;
     Main: undefined;
     AddMeal: undefined;
-    AddWorkout: { presetMode?: boolean } | undefined;
+    AddWorkout: { presetMode?: boolean; editPresetId?: string } | undefined;
     SaveMeal: undefined;
     Account: undefined;
 };

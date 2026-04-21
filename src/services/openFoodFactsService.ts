@@ -1,16 +1,59 @@
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { ScannedProduct } from '../types/foodRating';
+import { analyzeWithGemini } from './geminiService';
 
 const INDIA_BASE = 'https://in.openfoodfacts.org/api/v0/product';
 const WORLD_BASE = 'https://world.openfoodfacts.org/api/v0/product';
 
-export async function lookupBarcode(barcode: string): Promise<ScannedProduct | null> {
-  let data = await fetchProduct(`${INDIA_BASE}/${barcode}.json`);
-  if (!data) {
-    data = await fetchProduct(`${WORLD_BASE}/${barcode}.json`);
+// Check YOUR catalog first
+const lookupOwnCatalog = async (barcode: string): Promise<ScannedProduct | null> => {
+  const key = String(barcode);
+  console.log('[NOMA catalog] looking up barcode:', key);
+  try {
+    const snap = await getDoc(doc(db, 'product_catalog', key));
+    if (snap.exists()) {
+      console.log('[NOMA catalog] HIT — returning verified product');
+      const data = snap.data();
+      return {
+        barcode:    key,
+        name:       data.name,
+        brand:      data.brand,
+        source:     'noma_verified' as const,
+        rating:     'C',
+        rating_reasons: [],
+        nutrition: {
+          calories_per_100g: data.calories,
+          protein_g:         data.protein_g,
+          fat_g:             data.fat_g,
+          carbs_g:           data.carbs_g,
+          sugar_g:           data.sugar_g,
+          sodium_mg:         data.sodium_mg,
+          fiber_g:           data.fiber_g,
+        },
+      };
+    }
+    console.log('[NOMA catalog] MISS — no document for', key);
+    return null;
+  } catch (e: any) {
+    console.error('[NOMA catalog] ERROR', e?.code, e?.message, e);
+    return null;
   }
-  if (!data) return null;
-  return parseProduct(barcode, data);
-}
+};
+
+export const lookupBarcode = async (barcode: string): Promise<ScannedProduct> => {
+  // 1️⃣ Your verified Indian product catalog
+  const ours = await lookupOwnCatalog(barcode);
+  if (ours) return ours;
+
+  // 2️⃣ Open Food Facts India — TEMPORARILY DISABLED to test Firestore connection
+  // let data = await fetchProduct(`${INDIA_BASE}/${barcode}.json`);
+  // if (!data) data = await fetchProduct(`${WORLD_BASE}/${barcode}.json`);
+  // if (data) return parseOpenFoodFacts(barcode, data);
+
+  // 3️⃣ Gemini AI fallback
+  return await analyzeWithGemini(barcode);
+};
 
 async function fetchProduct(url: string): Promise<any | null> {
   try {
@@ -25,7 +68,7 @@ async function fetchProduct(url: string): Promise<any | null> {
   }
 }
 
-function parseProduct(barcode: string, p: any): ScannedProduct {
+function parseOpenFoodFacts(barcode: string, p: any): ScannedProduct {
   const n = p.nutriments ?? {};
   const kcalPer100 = n['energy-kcal_100g'] ?? (n['energy_100g'] ? n['energy_100g'] / 4.184 : 0);
   return {

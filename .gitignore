@@ -40,3 +40,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# catalog upload scripts — never commit secrets or bulk data
+scripts/serviceAccount.json
+scripts/products.csv
+scripts/node_modules/

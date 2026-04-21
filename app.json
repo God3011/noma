@@ -17,7 +17,8 @@
       "infoPlist": {
         "NSHealthShareUsageDescription": "NOMA reads your daily step count from Apple Health to automatically track your activity.",
         "NSHealthUpdateUsageDescription": "NOMA reads your daily step count from Apple Health to automatically track your activity."
-      }
+      },
+      "bundleIdentifier": "com.shanmukh30.noma"
     },
     "android": {
       "package": "com.shanmukh30.noma",

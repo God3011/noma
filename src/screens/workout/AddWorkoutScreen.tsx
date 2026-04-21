@@ -53,10 +53,33 @@ export function AddWorkoutScreen() {
 
     const addWorkout = useWorkoutStore((s) => s.addWorkout);
     const addPreset = useWorkoutPresetStore((s) => s.addPreset);
+    const updatePreset = useWorkoutPresetStore((s) => s.updatePreset);
+    const presets = useWorkoutPresetStore((s) => s.presets);
 
-    const [exercises, setExercises] = useState<ExerciseForm[]>([emptyExercise()]);
+    const editPresetId = route.params?.editPresetId;
+    const existingPreset = editPresetId ? presets.find((p) => p.id === editPresetId) : undefined;
+
+    const exerciseToForm = (ex: import('../../types/workout').Exercise): ExerciseForm => {
+        const knownNames = WORKOUT_TYPES.map((t) => t.name);
+        const isKnown = knownNames.includes(ex.name);
+        return {
+            name: isKnown ? ex.name : (ex.category === 'other' ? '' : '__custom__'),
+            category: ex.category,
+            customName: !isKnown ? ex.name : '',
+            sets: (ex.sets ?? []).map((s) => ({
+                repsStr: s.reps > 0 ? s.reps.toString() : '',
+                weightStr: s.weight_kg != null ? s.weight_kg.toString() : '',
+            })),
+            duration: ex.duration_minutes != null ? ex.duration_minutes.toString() : '',
+            speed: ex.speed_kmh != null ? ex.speed_kmh.toString() : '',
+        };
+    };
+
+    const [exercises, setExercises] = useState<ExerciseForm[]>(
+        existingPreset ? existingPreset.exercises.map(exerciseToForm) : [emptyExercise()]
+    );
     const [notes, setNotes] = useState('');
-    const [presetName, setPresetName] = useState('');
+    const [presetName, setPresetName] = useState(existingPreset?.name ?? '');
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     // --- Exercise helpers ---
@@ -166,12 +189,16 @@ export function AddWorkoutScreen() {
         setErrors(errs);
         if (Object.keys(errs).length > 0) return;
 
-        addPreset({
-            id: generateId(),
-            name: presetName.trim(),
-            exercises: builtExercises,
-            created_at: new Date().toISOString(),
-        });
+        if (editPresetId) {
+            updatePreset(editPresetId, { name: presetName.trim(), exercises: builtExercises });
+        } else {
+            addPreset({
+                id: generateId(),
+                name: presetName.trim(),
+                exercises: builtExercises,
+                created_at: new Date().toISOString(),
+            });
+        }
         navigation.goBack();
     };
 
@@ -187,7 +214,7 @@ export function AddWorkoutScreen() {
                     <TouchableOpacity onPress={() => navigation.goBack()}>
                         <Ionicons name="close" size={28} color={theme.colors.textPrimary} />
                     </TouchableOpacity>
-                    <Text style={styles.title}>{presetMode ? 'Create Preset' : 'Log Workout'}</Text>
+                    <Text style={styles.title}>{presetMode ? (editPresetId ? 'Edit Preset' : 'Create Preset') : 'Log Workout'}</Text>
                     <View style={{ width: 28 }} />
                 </View>
 
@@ -371,7 +398,7 @@ export function AddWorkoutScreen() {
 
                 <View style={{ marginTop: 16, marginBottom: 40 }}>
                     <PrimaryButton
-                        title={presetMode ? 'Save Preset' : 'Log Workout'}
+                        title={presetMode ? (editPresetId ? 'Update Preset' : 'Save Preset') : 'Log Workout'}
                         onPress={presetMode ? handleSavePreset : handleSave}
                     />
                 </View>

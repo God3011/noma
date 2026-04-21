@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View, Text, ScrollView, TouchableOpacity, StyleSheet, StatusBar, Animated,
+    Modal, TextInput, Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -11,6 +12,10 @@ import NutritionRatingBadge from '../../components/foodrating/NutritionRatingBad
 import NutritionRow from '../../components/foodrating/NutritionRow';
 import AIMarkerBadge from '../../components/foodrating/AIMarkerBadge';
 import { FoodRatingStackParamList } from '../../navigation/FoodRatingNavigator';
+import { useFoodLogStore } from '../../store/useFoodLogStore';
+import { MealType } from '../../types/food';
+import { generateId } from '../../utils/generateId';
+import { getToday } from '../../utils/dateHelpers';
 
 type Nav = StackNavigationProp<FoodRatingStackParamList, 'ProductResult'>;
 type Route = RouteProp<FoodRatingStackParamList, 'ProductResult'>;
@@ -27,11 +32,19 @@ const RATING_BG: Record<string, string> = {
     A: '#005236', B: '#3f4b23', C: '#653e00', D: '#6b3622', E: '#93000a',
 };
 
-const HoverBubble = ({ label, value, unit, color, maxVal, delay = 0 }: any) => {
-    const safeValue = (value == null || isNaN(value)) ? 0 : Number(value);
-    const ratio = Math.max(0.15, Math.min(1, Math.sqrt(Math.max(0, safeValue) / maxVal)));
-    const size = 65 + ratio * 60;
 
+interface BubbleData {
+    label: string;
+    value: number;
+    unit: string;
+    color: string;
+    maxVal: number;
+    delay: number;
+}
+
+const ClusterBubble = ({
+    label, value, unit, color, delay, size, x, y,
+}: BubbleData & { size: number; x: number; y: number }) => {
     const floatAnim = React.useRef(new Animated.Value(0)).current;
 
     React.useEffect(() => {
@@ -39,12 +52,12 @@ const HoverBubble = ({ label, value, unit, color, maxVal, delay = 0 }: any) => {
             Animated.sequence([
                 Animated.timing(floatAnim, {
                     toValue: 1,
-                    duration: 2500 + Math.random() * 1000,
+                    duration: 2600 + Math.random() * 900,
                     useNativeDriver: true,
                 }),
                 Animated.timing(floatAnim, {
                     toValue: 0,
-                    duration: 2500 + Math.random() * 1000,
+                    duration: 2600 + Math.random() * 900,
                     useNativeDriver: true,
                 }),
             ])
@@ -53,30 +66,122 @@ const HoverBubble = ({ label, value, unit, color, maxVal, delay = 0 }: any) => {
         return () => float.stop();
     }, [floatAnim, delay]);
 
-    const translateY = floatAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, -10]
-    });
+    const translateY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -7] });
 
     return (
-        <Animated.View key={label} style={{
+        <Animated.View style={{
+            position: 'absolute', left: x, top: y,
             width: size, height: size, borderRadius: size / 2,
-            backgroundColor: color, alignItems: 'center', justifyContent: 'center',
-            margin: 4, shadowColor: color, shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.5, shadowRadius: 10, elevation: 6,
-            transform: [{ translateY }]
+            backgroundColor: color,
+            alignItems: 'center', justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.5,
+            shadowRadius: 10,
+            elevation: 8,
+            transform: [{ translateY }],
         }}>
-            <Text style={{ color: '#fff', fontSize: size > 90 ? 16 : 12, fontWeight: '800' }}>{Math.round(safeValue)}{unit}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: size > 90 ? 11 : 9, fontWeight: '600', marginTop: 1 }} numberOfLines={1}>{label}</Text>
+            <Text style={{
+                color: '#fff',
+                fontSize: size > 95 ? 15 : 11,
+                fontWeight: '800',
+            }}>
+                {Math.round(value)}{unit}
+            </Text>
+            <Text style={{
+                color: 'rgba(255,255,255,0.75)',
+                fontSize: size > 95 ? 10 : 8,
+                fontWeight: '600',
+                marginTop: 1,
+            }} numberOfLines={1}>
+                {label}
+            </Text>
         </Animated.View>
     );
 };
+
+const CLUSTER_SIZE = 310;
+const OVERLAP = -10; // negative = gap between bubbles
+
+const BubbleCluster = ({ bubbles }: { bubbles: BubbleData[] }) => {
+    if (bubbles.length === 0) return null;
+
+    const sized = bubbles.map(b => {
+        const safe = isNaN(b.value) ? 0 : Math.max(0, b.value);
+        const ratio = Math.max(0.18, Math.min(1, Math.sqrt(safe / b.maxVal)));
+        const size = 64 + ratio * 58;
+        return { ...b, size };
+    }).sort((a, b) => b.size - a.size);
+
+    const [center, ...rest] = sized;
+    const cx = CLUSTER_SIZE / 2;
+    const cy = CLUSTER_SIZE / 2;
+
+    return (
+        <View style={{ width: CLUSTER_SIZE, height: CLUSTER_SIZE }}>
+            {/* Surrounding bubbles first so center renders on top */}
+            {rest.map((b, i) => {
+                const angle = (i * 2 * Math.PI / rest.length) - Math.PI / 2;
+                const dist = center.size / 2 + b.size / 2 - OVERLAP;
+                return (
+                    <ClusterBubble
+                        key={b.label}
+                        {...b}
+                        x={cx + Math.cos(angle) * dist - b.size / 2}
+                        y={cy + Math.sin(angle) * dist - b.size / 2}
+                    />
+                );
+            })}
+            {/* Center (largest) bubble on top */}
+            <ClusterBubble
+                {...center}
+                x={cx - center.size / 2}
+                y={cy - center.size / 2}
+            />
+        </View>
+    );
+};
+
+const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 export default function ProductResultScreen() {
     const navigation = useNavigation<Nav>();
     const route = useRoute<Route>();
     const { product } = route.params;
     const { nutrition: n } = product;
+    const addMeal = useFoodLogStore((s) => s.addMeal);
+
+    const [logModalVisible, setLogModalVisible] = useState(false);
+    const [servingGrams, setServingGrams] = useState('100');
+    const [selectedMealType, setSelectedMealType] = useState<MealType>('lunch');
+
+    const handleLog = () => {
+        const grams = parseFloat(servingGrams) || 100;
+        const ratio = grams / 100;
+        addMeal({
+            id: generateId(),
+            date: getToday(),
+            name: product.brand ? `${product.name} (${product.brand})` : product.name,
+            calories: Math.round(n.calories_per_100g * ratio),
+            protein_g: Math.round((n.protein_g ?? 0) * ratio * 10) / 10,
+            carbs_g: Math.round((n.carbs_g ?? 0) * ratio * 10) / 10,
+            fat_g: Math.round((n.fat_g ?? 0) * ratio * 10) / 10,
+            meal_type: selectedMealType,
+            logged_at: new Date().toISOString(),
+        });
+        setLogModalVisible(false);
+        Alert.alert('Logged!', `${product.name} added to your ${selectedMealType}.`);
+    };
+
+    const bubbles: BubbleData[] = [
+        ...(n.calories_per_100g > 0 ? [{ label: 'Calories', value: n.calories_per_100g, unit: 'kcal', color: theme.colors.secondaryContainer, maxVal: 500, delay: 0 }] : []),
+        ...(Number(n.carbs_g) > 0 ? [{ label: 'Carbs', value: Number(n.carbs_g), unit: 'g', color: theme.colors.tertiary, maxVal: 100, delay: 200 }] : []),
+        ...(Number(n.protein_g) > 0 ? [{ label: 'Protein', value: Number(n.protein_g), unit: 'g', color: theme.colors.primary, maxVal: 100, delay: 400 }] : []),
+        ...(Number(n.fat_g) > 0 ? [{ label: 'Fat', value: Number(n.fat_g), unit: 'g', color: theme.colors.outline, maxVal: 100, delay: 100 }] : []),
+        ...(Number(n.sugar_g) > 0 ? [{ label: 'Sugar', value: Number(n.sugar_g), unit: 'g', color: theme.colors.danger, maxVal: 50, delay: 500 }] : []),
+        ...(Number(n.sodium_mg) > 0 ? [{ label: 'Sodium', value: Number(n.sodium_mg), unit: 'mg', color: theme.colors.onSurfaceVariant, maxVal: 1500, delay: 300 }] : []),
+        ...(Number(n.fiber_g) > 0 ? [{ label: 'Fiber', value: Number(n.fiber_g), unit: 'g', color: theme.colors.success, maxVal: 30, delay: 600 }] : []),
+    ];
 
     return (
         <LinearGradient
@@ -103,6 +208,12 @@ export default function ProductResultScreen() {
                     />
                 )}
 
+                {product.source === 'noma_verified' && (
+                    <View style={styles.verifiedBadge}>
+                        <Text style={styles.verifiedText}>✓ NOMA Verified</Text>
+                    </View>
+                )}
+
                 {/* Product identity */}
                 <View style={styles.productCard}>
                     <View style={styles.productInfo}>
@@ -112,12 +223,26 @@ export default function ProductResultScreen() {
                     </View>
                     <View style={styles.sourcePill}>
                         <Ionicons
-                            name={product.source === 'database' ? 'cloud-done-outline' : 'sparkles'}
+                            name={
+                                product.source === 'noma_verified' ? 'shield-checkmark'
+                                : product.source === 'database' ? 'cloud-done-outline'
+                                : 'sparkles'
+                            }
                             size={12}
-                            color={product.source === 'database' ? theme.colors.primary : '#7c3aed'}
+                            color={
+                                product.source === 'noma_verified' ? '#00E5A0'
+                                : product.source === 'database' ? theme.colors.primary
+                                : '#7c3aed'
+                            }
                         />
-                        <Text style={[styles.sourceText, product.source === 'ai' && { color: '#7c3aed' }]}>
-                            {product.source === 'database' ? 'Open Food Facts' : 'AI Estimated'}
+                        <Text style={[
+                            styles.sourceText,
+                            product.source === 'ai' && { color: '#7c3aed' },
+                            product.source === 'noma_verified' && { color: '#00E5A0' },
+                        ]}>
+                            {product.source === 'noma_verified' ? 'NOMA Verified'
+                                : product.source === 'database' ? 'Open Food Facts'
+                                : 'AI Estimated'}
                         </Text>
                     </View>
                 </View>
@@ -131,19 +256,13 @@ export default function ProductResultScreen() {
                     </View>
                 </View>
 
-                {/* Full Screen Nutrition Layout */}
-                <View style={styles.fullScreenBubbles}>
-                    <Text style={styles.bubblesHeaderTitle}>Nutrition Profile</Text>
-                    <View style={styles.bubblesContainer}>
-                        {(n.calories_per_100g > 0) && <HoverBubble label="Calories" value={n.calories_per_100g} unit="kcal" color={theme.colors.secondaryContainer} maxVal={500} delay={0} />}
-                        {(Number(n.carbs_g) > 0) && <HoverBubble label="Carbs" value={n.carbs_g} unit="g" color={theme.colors.tertiary} maxVal={100} delay={200} />}
-                        {(Number(n.protein_g) > 0) && <HoverBubble label="Protein" value={n.protein_g} unit="g" color={theme.colors.primary} maxVal={100} delay={400} />}
-                        {(Number(n.fat_g) > 0) && <HoverBubble label="Fat" value={n.fat_g} unit="g" color={theme.colors.outline} maxVal={100} delay={100} />}
-                        {(Number(n.sugar_g) > 0) && <HoverBubble label="Sugar" value={n.sugar_g} unit="g" color={theme.colors.danger} maxVal={50} delay={500} />}
-                        {(Number(n.sodium_mg) > 0) && <HoverBubble label="Sodium" value={n.sodium_mg} unit="mg" color={theme.colors.onSurfaceVariant} maxVal={1500} delay={300} />}
-                        {(Number(n.fiber_g) > 0) && <HoverBubble label="Fiber" value={n.fiber_g} unit="g" color={theme.colors.success} maxVal={30} delay={600} />}
+                {/* Nutrition Profile bubble cluster — hide entirely when no non-zero values */}
+                {bubbles.length > 0 && (
+                    <View style={styles.fullScreenBubbles}>
+                        <Text style={styles.bubblesHeaderTitle}>Nutrition Profile</Text>
+                        <BubbleCluster bubbles={bubbles} />
                     </View>
-                </View>
+                )}
 
                 {/* Reasons */}
                 {product.rating_reasons.length > 0 && (
@@ -176,6 +295,12 @@ export default function ProductResultScreen() {
                     </>
                 )}
 
+                {/* Log to Food Log */}
+                <TouchableOpacity style={styles.logBtn} onPress={() => setLogModalVisible(true)}>
+                    <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                    <Text style={styles.logBtnText}>Log to Food Log</Text>
+                </TouchableOpacity>
+
                 {/* Scan again */}
                 <TouchableOpacity style={styles.scanAgainBtn} onPress={() => navigation.goBack()}>
                     <Ionicons name="barcode-outline" size={20} color="#fff" />
@@ -184,6 +309,51 @@ export default function ProductResultScreen() {
 
                 <View style={{ height: 120 }} />
             </ScrollView>
+
+            {/* Log Modal */}
+            <Modal visible={logModalVisible} transparent animationType="slide">
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setLogModalVisible(false)}>
+                    <TouchableOpacity activeOpacity={1} style={styles.modalSheet}>
+                        <View style={styles.modalHandle} />
+                        <Text style={styles.modalTitle}>Log to Food Log</Text>
+                        <Text style={styles.modalProduct} numberOfLines={1}>{product.name}</Text>
+
+                        <Text style={styles.modalLabel}>Serving size (grams)</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            value={servingGrams}
+                            onChangeText={setServingGrams}
+                            keyboardType="decimal-pad"
+                            placeholderTextColor={theme.colors.textMuted}
+                            selectTextOnFocus
+                        />
+
+                        {/* Calories preview */}
+                        <Text style={styles.modalCalPreview}>
+                            ≈ {Math.round(n.calories_per_100g * (parseFloat(servingGrams) || 100) / 100)} kcal
+                        </Text>
+
+                        <Text style={styles.modalLabel}>Meal type</Text>
+                        <View style={styles.mealTypeRow}>
+                            {MEAL_TYPES.map((mt) => (
+                                <TouchableOpacity
+                                    key={mt}
+                                    style={[styles.mealTypeChip, selectedMealType === mt && styles.mealTypeChipActive]}
+                                    onPress={() => setSelectedMealType(mt)}
+                                >
+                                    <Text style={[styles.mealTypeText, selectedMealType === mt && styles.mealTypeTextActive]}>
+                                        {mt.charAt(0).toUpperCase() + mt.slice(1)}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <TouchableOpacity style={styles.modalLogBtn} onPress={handleLog}>
+                            <Text style={styles.modalLogBtnText}>Add to Log</Text>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
         </LinearGradient>
     );
 }
@@ -242,7 +412,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     fullScreenBubbles: {
-        marginHorizontal: -20, // go edge-to-edge ignoring scroll view padding
+        marginHorizontal: -20,
         paddingHorizontal: 20,
         paddingTop: 32,
         paddingBottom: 40,
@@ -257,13 +427,6 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         marginBottom: 24,
     },
-    bubblesContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-    },
 
     reasonRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
     reasonBorder: { borderTopWidth: 1, borderTopColor: theme.colors.surfaceContainerLow },
@@ -272,7 +435,7 @@ const styles = StyleSheet.create({
     scanAgainBtn: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
         backgroundColor: theme.colors.primary,
-        borderRadius: 30, // pill radius to make it hover-style
+        borderRadius: 30,
         paddingHorizontal: 32,
         paddingVertical: 18,
         alignSelf: 'center',
@@ -284,4 +447,74 @@ const styles = StyleSheet.create({
         elevation: 8,
     },
     scanAgainText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+
+    logBtn: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+        backgroundColor: theme.colors.primaryContainer,
+        borderRadius: 30,
+        paddingHorizontal: 32, paddingVertical: 16,
+        alignSelf: 'center', marginBottom: 12,
+        borderWidth: 1, borderColor: theme.colors.primary,
+    },
+    logBtnText: { color: theme.colors.primary, fontSize: 15, fontWeight: '700' },
+
+    // Modal
+    modalOverlay: {
+        flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'flex-end',
+    },
+    modalSheet: {
+        backgroundColor: theme.colors.surfaceContainerLow,
+        borderTopLeftRadius: theme.borderRadius.xl,
+        borderTopRightRadius: theme.borderRadius.xl,
+        padding: 24, paddingBottom: 40,
+    },
+    modalHandle: {
+        width: 40, height: 4, borderRadius: 2,
+        backgroundColor: theme.colors.outlineVariant,
+        alignSelf: 'center', marginBottom: 20,
+    },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.textPrimary, marginBottom: 4 },
+    modalProduct: { fontSize: 13, color: theme.colors.textSecondary, marginBottom: 20 },
+    modalLabel: { fontSize: 12, fontWeight: '600', color: theme.colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
+    modalInput: {
+        backgroundColor: theme.colors.surfaceContainerLowest,
+        borderRadius: theme.borderRadius.sm,
+        paddingHorizontal: 14, paddingVertical: 12,
+        fontSize: 20, fontWeight: '700', color: theme.colors.textPrimary,
+        borderWidth: 1, borderColor: theme.colors.outlineVariant,
+        marginBottom: 8,
+    },
+    modalCalPreview: { fontSize: 13, color: theme.colors.primary, fontWeight: '600', marginBottom: 20 },
+    mealTypeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 24 },
+    mealTypeChip: {
+        paddingHorizontal: 16, paddingVertical: 8,
+        borderRadius: theme.borderRadius.pill,
+        borderWidth: 1, borderColor: theme.colors.outlineVariant,
+    },
+    mealTypeChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+    mealTypeText: { fontSize: 13, fontWeight: '500', color: theme.colors.textSecondary },
+    mealTypeTextActive: { color: '#fff', fontWeight: '700' },
+    modalLogBtn: {
+        backgroundColor: theme.colors.primary,
+        borderRadius: theme.borderRadius.pill,
+        paddingVertical: 16, alignItems: 'center',
+    },
+    modalLogBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+
+    verifiedBadge: {
+        margin: 16,
+        padding: 10,
+        backgroundColor: '#0A2A1A',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#00E5A0',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    verifiedText: {
+        color: '#00E5A0',
+        fontWeight: '700',
+        fontSize: 13,
+    },
 });

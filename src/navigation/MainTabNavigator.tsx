@@ -7,7 +7,7 @@ import { HomeScreen } from '../screens/home/HomeScreen';
 import { FoodLogScreen } from '../screens/foodlog/FoodLogScreen';
 import { WorkoutScreen } from '../screens/workout/WorkoutScreen';
 import { FoodRatingNavigator } from './FoodRatingNavigator';
-import { SkincareScreen } from '../screens/skincare/SkincareScreen';
+import InsightsScreen from '../screens/insights/InsightsScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -48,7 +48,7 @@ export function MainTabNavigator() {
                 component={HomeScreen}
                 options={{
                     tabBarLabel: 'Dashboard',
-                    tabBarIcon: ({ color, size }) => (
+                    tabBarIcon: ({ color }) => (
                         <Ionicons name="grid" size={22} color={color} />
                     ),
                 }}
@@ -58,7 +58,7 @@ export function MainTabNavigator() {
                 component={FoodLogScreen}
                 options={{
                     tabBarLabel: 'Log',
-                    tabBarIcon: ({ color, size }) => (
+                    tabBarIcon: ({ color }) => (
                         <Ionicons name="book" size={22} color={color} />
                     ),
                 }}
@@ -68,7 +68,7 @@ export function MainTabNavigator() {
                 component={WorkoutScreen}
                 options={{
                     tabBarLabel: 'Workout',
-                    tabBarIcon: ({ color, size }) => (
+                    tabBarIcon: ({ color }) => (
                         <Ionicons name="barbell" size={22} color={color} />
                     ),
                 }}
@@ -78,19 +78,20 @@ export function MainTabNavigator() {
                 component={FoodRatingNavigator}
                 options={{
                     tabBarLabel: 'Rating',
-                    tabBarIcon: ({ color, size }) => (
+                    tabBarIcon: ({ color }) => (
                         <Ionicons name="star" size={22} color={color} />
                     ),
                 }}
             />
             <Tab.Screen
-                name="Skincare"
-                component={SkincareScreen}
+                name="Insights"
+                component={InsightsScreen}
                 options={{
-                    tabBarLabel: 'Skincare',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="leaf" size={22} color={color} />
+                    tabBarLabel: 'Insights',
+                    tabBarIcon: ({ color }) => (
+                        <Ionicons name="bar-chart-outline" size={22} color={color} />
                     ),
+                    headerShown: false,
                 }}
             />
         </Tab.Navigator>

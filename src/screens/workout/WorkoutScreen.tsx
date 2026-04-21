@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert,
+    View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert, Platform, ActionSheetIOS,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -33,7 +33,26 @@ export function WorkoutScreen() {
         [workouts, selectedDate]
     );
 
-    const handleDeletePreset = (preset: WorkoutPreset) => {
+    const handlePresetLongPress = (preset: WorkoutPreset) => {
+        const options = ['Edit Preset', 'Delete Preset', 'Cancel'];
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                { options, destructiveButtonIndex: 1, cancelButtonIndex: 2 },
+                (idx) => {
+                    if (idx === 0) navigation.navigate('AddWorkout', { presetMode: true, editPresetId: preset.id });
+                    if (idx === 1) confirmDelete(preset);
+                }
+            );
+        } else {
+            Alert.alert(preset.name, 'What would you like to do?', [
+                { text: 'Edit', onPress: () => navigation.navigate('AddWorkout', { presetMode: true, editPresetId: preset.id }) },
+                { text: 'Delete', style: 'destructive', onPress: () => confirmDelete(preset) },
+                { text: 'Cancel', style: 'cancel' },
+            ]);
+        }
+    };
+
+    const confirmDelete = (preset: WorkoutPreset) => {
         Alert.alert(
             'Delete Preset',
             `Delete "${preset.name}"? This cannot be undone.`,
@@ -106,7 +125,7 @@ export function WorkoutScreen() {
                                         key={preset.id}
                                         style={styles.presetCard}
                                         onPress={() => setActivePreset(preset)}
-                                        onLongPress={() => handleDeletePreset(preset)}
+                                        onLongPress={() => handlePresetLongPress(preset)}
                                         activeOpacity={0.8}
                                     >
                                         <View style={styles.presetCardTop}>

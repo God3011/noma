@@ -12,7 +12,7 @@ export interface ScannedProduct {
   barcode: string;
   name: string;
   brand: string;
-  source: 'database' | 'ai';
+  source: 'database' | 'ai' | 'noma_verified';
   rating: string;
   rating_reasons: string[];
   nutrition: NutritionData;

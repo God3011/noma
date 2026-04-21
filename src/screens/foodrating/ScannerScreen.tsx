@@ -31,7 +31,8 @@ export default function ScannerScreen() {
         }
     }, []);
 
-    const handleBarcodeScanned = async ({ data: barcode }: { data: string }) => {
+    const handleBarcodeScanned = async ({ data: barcode, type }: { data: string; type?: string }) => {
+        console.log('[Scanner] onBarcodeScanned fired:', { barcode, type, isProcessing: isProcessing.current, lastScanned: lastScanned.current });
         if (isProcessing.current || !barcode || barcode === lastScanned.current) return;
 
         isProcessing.current = true;
@@ -105,9 +106,10 @@ export default function ScannerScreen() {
             <CameraView
                 style={StyleSheet.absoluteFill}
                 facing="back"
-                onBarcodeScanned={!loading ? handleBarcodeScanned : undefined}
+                autofocus="on"
+                onBarcodeScanned={handleBarcodeScanned}
                 barcodeScannerSettings={{
-                    barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'qr'],
+                    barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'qr', 'code128', 'code39', 'code93', 'itf14', 'codabar', 'pdf417', 'aztec', 'datamatrix'],
                 }}
             >
                 {/* Dim overlay */}

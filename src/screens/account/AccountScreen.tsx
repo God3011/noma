@@ -1,22 +1,14 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    StatusBar, TextInput, Platform, Alert,
+    StatusBar, TextInput, Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/useUserStore';
-import { useDailyStepsStore } from '../../store/useDailyStepsStore';
 import { calculateBMR, calculateTDEE } from '../../utils/calorieCalculator';
 import { theme } from '../../constants/theme';
 import { UserProfile, CaloriePlan } from '../../types/user';
-import {
-    requestHealthPermissions,
-    fetchTodaySteps,
-    getSupportedHealthPlatform,
-    openHealthConnectPlayStore,
-} from '../../services/healthService';
-import { getToday } from '../../utils/dateHelpers';
 
 // ─── Conversion helpers ───────────────────────────────────────────────────────
 
@@ -116,53 +108,8 @@ export function AccountScreen() {
     const setProfile = useUserStore((s) => s.setProfile);
     const setPlan = useUserStore((s) => s.setPlan);
 
-    const healthSyncEnabled = useDailyStepsStore((s) => s.healthSyncEnabled);
-    const setHealthSyncEnabled = useDailyStepsStore((s) => s.setHealthSyncEnabled);
-    const setSteps = useDailyStepsStore((s) => s.setSteps);
-
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState('');
-    const [syncing, setSyncing] = useState(false);
-
-    const supportedPlatform = getSupportedHealthPlatform();
-    // On iOS show Apple Health; on Android show Google Fit
-    const healthConnected = healthSyncEnabled && supportedPlatform !== 'none';
-
-    const handleHealthConnect = async () => {
-        if (healthConnected) {
-            setHealthSyncEnabled(false);
-            return;
-        }
-        if (supportedPlatform === 'none') {
-            Alert.alert('Not Supported', 'Health integration is not available on this device.');
-            return;
-        }
-        setSyncing(true);
-        const result = await requestHealthPermissions(supportedPlatform);
-        if (result === 'granted') {
-            setHealthSyncEnabled(true);
-            const steps = await fetchTodaySteps();
-            if (steps > 0) setSteps(getToday(), steps);
-            Alert.alert('Connected', 'Step count will now sync automatically.');
-        } else if (result === 'not_installed') {
-            Alert.alert(
-                'Health Connect Not Installed',
-                'NOMA needs the Health Connect app to sync steps on Android. Install it from the Play Store.',
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Install', onPress: openHealthConnectPlayStore },
-                ]
-            );
-        } else {
-            Alert.alert(
-                'Permission Denied',
-                supportedPlatform === 'apple'
-                    ? 'Please allow NOMA to access Health in Settings > Privacy & Security > Health > NOMA.'
-                    : 'Open the Health Connect app, go to App permissions, and allow NOMA to read Steps.'
-            );
-        }
-        setSyncing(false);
-    };
 
     const isImperial = profile?.unit_preference === 'imperial';
 
@@ -417,58 +364,6 @@ export function AccountScreen() {
                     </EditableRow>
                 </View>
 
-                {/* Health Sync */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Health Integrations</Text>
-
-                    {/* Show only the relevant platform row */}
-                    {(supportedPlatform === 'apple' || supportedPlatform === 'none') && (
-                        <View style={rowStyles.wrap}>
-                            <View style={rowStyles.left}>
-                                <Ionicons name="fitness" size={20} color={theme.colors.textPrimary} />
-                                <View>
-                                    <Text style={rowStyles.label}>Apple Health</Text>
-                                    <Text style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>
-                                        {healthConnected ? 'Syncing steps automatically' : 'Sync steps automatically'}
-                                    </Text>
-                                </View>
-                            </View>
-                            <TouchableOpacity
-                                style={[styles.syncBtn, healthConnected && { backgroundColor: theme.colors.primaryContainer }]}
-                                onPress={handleHealthConnect}
-                                disabled={syncing}
-                            >
-                                <Text style={[styles.syncBtnText, healthConnected && { color: theme.colors.primary }]}>
-                                    {syncing ? '...' : healthConnected ? 'Connected' : 'Connect'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {supportedPlatform === 'google' && (
-                        <View style={rowStyles.wrap}>
-                            <View style={rowStyles.left}>
-                                <Ionicons name="pulse" size={20} color={theme.colors.textPrimary} />
-                                <View>
-                                    <Text style={rowStyles.label}>Google Health Connect</Text>
-                                    <Text style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>
-                                        {healthConnected ? 'Syncing steps automatically' : 'Sync steps automatically'}
-                                    </Text>
-                                </View>
-                            </View>
-                            <TouchableOpacity
-                                style={[styles.syncBtn, healthConnected && { backgroundColor: theme.colors.primaryContainer }]}
-                                onPress={handleHealthConnect}
-                                disabled={syncing}
-                            >
-                                <Text style={[styles.syncBtnText, healthConnected && { color: theme.colors.primary }]}>
-                                    {syncing ? '...' : healthConnected ? 'Connected' : 'Connect'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </View>
-
                 {/* Plan */}
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Current Plan</Text>
@@ -682,17 +577,6 @@ const styles = StyleSheet.create({
     deficitText: { fontSize: 13, color: theme.colors.textMuted, fontWeight: '500' },
 
     noPlanText: { fontSize: 14, color: theme.colors.textMuted, textAlign: 'center', paddingVertical: 16 },
-
-    syncBtn: {
-        paddingHorizontal: 12, paddingVertical: 8,
-        borderRadius: theme.borderRadius.pill,
-        backgroundColor: theme.colors.surfaceContainerHighest,
-        minWidth: 84,
-        alignItems: 'center',
-    },
-    syncBtnText: {
-        fontSize: 12, fontWeight: '700', color: theme.colors.textPrimary,
-    },
 
     saveBlock: {
         backgroundColor: theme.colors.primary, borderRadius: theme.borderRadius.md,

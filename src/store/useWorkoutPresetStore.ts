@@ -8,6 +8,7 @@ interface WorkoutPresetState {
     // lastWeights[presetId][exerciseName] = sets with weights from last session
     lastWeights: Record<string, Record<string, WorkoutSet[]>>;
     addPreset: (preset: WorkoutPreset) => void;
+    updatePreset: (id: string, patch: Partial<Omit<WorkoutPreset, 'id'>>) => void;
     deletePreset: (id: string) => void;
     saveLastWeights: (presetId: string, exerciseName: string, sets: WorkoutSet[]) => void;
     getLastWeights: (presetId: string, exerciseName: string) => WorkoutSet[] | undefined;
@@ -20,6 +21,10 @@ export const useWorkoutPresetStore = create<WorkoutPresetState>()(
             lastWeights: {},
             addPreset: (preset) =>
                 set((s) => ({ presets: [...s.presets, preset] })),
+            updatePreset: (id, patch) =>
+                set((s) => ({
+                    presets: s.presets.map((p) => p.id === id ? { ...p, ...patch } : p),
+                })),
             deletePreset: (id) =>
                 set((s) => ({ presets: s.presets.filter((p) => p.id !== id) })),
             saveLastWeights: (presetId, exerciseName, sets) =>
