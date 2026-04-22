@@ -16,8 +16,11 @@ export function MainTabNavigator() {
         <Tab.Navigator
             screenOptions={{
                 headerShown: false,
+                lazy: false,
+                animation: 'shift',
+                sceneStyle: { backgroundColor: theme.colors.background },
                 tabBarStyle: {
-                    backgroundColor: 'rgba(19, 19, 19, 0.92)',
+                    backgroundColor: 'rgba(13, 13, 13, 0.95)',
                     borderTopWidth: 1,
                     borderTopColor: 'rgba(255, 255, 255, 0.05)',
                     elevation: 0,
@@ -64,22 +67,22 @@ export function MainTabNavigator() {
                 }}
             />
             <Tab.Screen
-                name="Workout"
-                component={WorkoutScreen}
-                options={{
-                    tabBarLabel: 'Workout',
-                    tabBarIcon: ({ color }) => (
-                        <Ionicons name="barbell" size={22} color={color} />
-                    ),
-                }}
-            />
-            <Tab.Screen
                 name="FoodRating"
                 component={FoodRatingNavigator}
                 options={{
                     tabBarLabel: 'Rating',
                     tabBarIcon: ({ color }) => (
                         <Ionicons name="star" size={22} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Workout"
+                component={WorkoutScreen}
+                options={{
+                    tabBarLabel: 'Workout',
+                    tabBarIcon: ({ color }) => (
+                        <Ionicons name="barbell" size={22} color={color} />
                     ),
                 }}
             />

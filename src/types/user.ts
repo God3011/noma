@@ -1,3 +1,6 @@
+export type BodyType = 'slim' | 'normal' | 'overweight';
+export type BodyGoal = 'lean' | 'athletic' | 'bulk';
+
 export interface UserProfile {
   age: number;
   weight_kg: number;
@@ -7,6 +10,8 @@ export interface UserProfile {
   steps_per_day: number;
   workout_days_per_week: number;
   unit_preference: 'metric' | 'imperial';
+  body_type?: BodyType;
+  goal?: BodyGoal;
 }
 
 export interface CaloriePlan {

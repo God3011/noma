@@ -1,6 +1,7 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { RootStackParamList, OnboardingStackParamList } from './types';
+import { theme } from '../constants/theme';
 import { useUserStore } from '../store/useUserStore';
 import { MainTabNavigator } from './MainTabNavigator';
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
@@ -11,6 +12,10 @@ import { AddMealScreen } from '../screens/foodlog/AddMealScreen';
 import { SaveMealScreen } from '../screens/foodlog/SaveMealScreen';
 import { AddWorkoutScreen } from '../screens/workout/AddWorkoutScreen';
 import { AccountScreen } from '../screens/account/AccountScreen';
+import { AvatarScreen } from '../screens/avatar/AvatarScreen';
+import { ActiveWorkoutScreen } from '../screens/workout/ActiveWorkoutScreen';
+import { SessionDetailScreen } from '../screens/workout/SessionDetailScreen';
+import { MuscleRankingsScreen } from '../screens/workout/MuscleRankingsScreen';
 
 const RootStack = createStackNavigator<RootStackParamList>();
 const OnboardingStack = createStackNavigator<OnboardingStackParamList>();
@@ -32,7 +37,7 @@ export function RootNavigator() {
     const plan = useUserStore((s) => s.plan);
 
     return (
-        <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        <RootStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: theme.colors.background } }}>
             {plan === null ? (
                 <RootStack.Screen name="Onboarding" component={OnboardingNavigator} />
             ) : (
@@ -57,6 +62,24 @@ export function RootNavigator() {
                         name="Account"
                         component={AccountScreen}
                         options={{ presentation: 'modal' }}
+                    />
+                    <RootStack.Screen
+                        name="Avatar"
+                        component={AvatarScreen}
+                        options={{ presentation: 'modal' }}
+                    />
+                    <RootStack.Screen
+                        name="ActiveWorkout"
+                        component={ActiveWorkoutScreen}
+                        options={{ presentation: 'modal' }}
+                    />
+                    <RootStack.Screen
+                        name="SessionDetail"
+                        component={SessionDetailScreen}
+                    />
+                    <RootStack.Screen
+                        name="MuscleRankings"
+                        component={MuscleRankingsScreen}
                     />
                 </>
             )}

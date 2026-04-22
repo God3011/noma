@@ -32,7 +32,7 @@ const TIER_DESCRIPTIONS: Record<string, string> = {
     easy: '~0.25 kg/week deficit',
 };
 const TIER_COLORS: Record<string, string> = {
-    aggressive: '#FF4D6D', moderate: '#f5a623', easy: '#10b981',
+    aggressive: '#FF4D6D', moderate: '#f5a623', easy: '#22c55e',
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

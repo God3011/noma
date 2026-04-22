@@ -17,12 +17,10 @@
       "infoPlist": {
         "NSHealthShareUsageDescription": "NOMA reads your daily step count from Apple Health to automatically track your activity.",
         "NSHealthUpdateUsageDescription": "NOMA reads your daily step count from Apple Health to automatically track your activity."
-      },
-      "bundleIdentifier": "com.shanmukh30.noma"
+      }
     },
+    "scheme": "noma",
     "android": {
-      "package": "com.shanmukh30.noma",
-      "minSdkVersion": 26,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -33,7 +31,8 @@
         "android.permission.health.READ_STEPS",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "package": "com.sunnyh1.noma"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -46,27 +45,19 @@
         }
       ],
       [
-        "react-native-health-connect",
-        {
-          "allowBackup": false
-        }
-      ],
-      [
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 26,
-            "compileSdkVersion": 36,
-            "targetSdkVersion": 35
+            "minSdkVersion": 26
           }
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "eas": {
-        "projectId": "d7c03a9d-8ebd-4771-899c-04394eb8a6d6"
+        "projectId": "2fec7a9f-83d7-4ccc-9ad4-0cc866120e56"
       }
-    },
-    "owner": "shanmukh30"
+    }
   }
 }

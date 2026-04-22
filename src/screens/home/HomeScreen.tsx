@@ -122,21 +122,22 @@ export function HomeScreen() {
             >
                 {/* Header */}
                 <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <TouchableOpacity
-                            style={styles.accountBtn}
-                            onPress={() => navigation.navigate('Account')}
-                            activeOpacity={0.75}
-                        >
-                            <Ionicons name="person" size={18} color={theme.colors.primary} />
-                        </TouchableOpacity>
-                        <View>
-                            <Text style={styles.greeting}>{getGreeting()},</Text>
-                            <Text style={styles.name}>Champion</Text>
-                        </View>
+                    <TouchableOpacity onPress={() => navigation.navigate('Account')} activeOpacity={0.75}>
+                        <Text style={styles.logoText}>NOMA</Text>
+                    </TouchableOpacity>
+                    <View style={styles.headerRight}>
+                        <Text style={styles.greeting}>{getGreeting()}, Champion</Text>
                     </View>
-                    <Text style={styles.date}>{formatDate(today)}</Text>
                 </View>
+
+                {/* Separator */}
+                <View style={styles.separator} />
+
+                {/* Compact Streak Strip */}
+                <StreakWidget completedDates={completedDates} />
+
+                {/* Today label */}
+                <Text style={styles.todayLabel}>Today — {formatDate(today)}</Text>
 
                 {/* Hero Section */}
                 <View style={styles.heroRow}>
@@ -146,54 +147,55 @@ export function HomeScreen() {
                             {totalCalories.toLocaleString()}{' '}
                             <Text style={styles.heroTarget}>/ {calorieTarget.toLocaleString()} kcal</Text>
                         </Text>
-                        <View style={styles.heroBadgeRow}>
-                            <View style={styles.heroBadge}>
-                                <Text style={styles.heroBadgeText}>{caloriePercent}% TARGET</Text>
-                            </View>
-                            <Text style={styles.heroRemaining}>
-                                {Math.max(0, calorieTarget - totalCalories)} remaining
-                            </Text>
+                        <View style={styles.progressBarTrack}>
+                            <View style={[styles.progressBarFill, { width: `${caloriePercent}%` as any }]} />
                         </View>
+                        <Text style={styles.heroRemaining}>
+                            {caloriePercent}% target · {Math.max(0, calorieTarget - totalCalories).toLocaleString()} remaining
+                        </Text>
                     </View>
                     <View style={styles.meterCard}>
                         <DailyRatingMeter
                             score={score.total}
                             label={score.label}
                             color={score.color}
-                            size={140}
+                            size={130}
                         />
                     </View>
                 </View>
 
-                {/* Summary Strip — no calories */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll}>
-                    <View style={styles.statsRow}>
-                        <StatCard
-                            imageIcon={require('../../../assets/protein-icon.png')}
-                            label="Protein"
-                            value={`${totalProtein}g`}
-                        />
-                        <StatCard
-                            icon="barbell"
-                            iconColor="#006c49"
-                            label="Workouts"
-                            value={`${todayWorkouts.length}`}
-                        />
-                        <StatCard
-                            icon="footsteps"
-                            iconColor="#10b981"
-                            label="Steps"
-                            value={`${todaySteps.toLocaleString()}`}
-                            onPress={() => { setStepsInput(todaySteps > 0 ? todaySteps.toString() : ''); setEditingSteps(true); }}
-                        />
-                        <StatCard
-                            icon="person-circle-outline"
-                            iconColor="#a78bfa"
-                            label="Avatar"
-                            value="—"
-                        />
-                    </View>
-                </ScrollView>
+                {/* 2x2 Stats Grid */}
+                <View style={styles.statsGrid}>
+                    <StatCard
+                        imageIcon={require('../../../assets/protein-icon.png')}
+                        label="Protein"
+                        value={`${totalProtein}g`}
+                        style={styles.statGridItem}
+                    />
+                    <StatCard
+                        icon="barbell"
+                        iconColor="#CC5500"
+                        label="Workouts"
+                        value={`${todayWorkouts.length}`}
+                        style={styles.statGridItem}
+                    />
+                    <StatCard
+                        icon="footsteps"
+                        iconColor="#FF6B00"
+                        label="Steps"
+                        value={`${todaySteps.toLocaleString()}`}
+                        onPress={() => { setStepsInput(todaySteps > 0 ? todaySteps.toString() : ''); setEditingSteps(true); }}
+                        style={styles.statGridItem}
+                    />
+                    <StatCard
+                        icon="person-circle-outline"
+                        iconColor="#a78bfa"
+                        label="Avatar"
+                        value="View"
+                        onPress={() => navigation.navigate('Avatar')}
+                        style={styles.statGridItem}
+                    />
+                </View>
 
                 {/* Step Editor */}
                 {editingSteps && (
@@ -218,9 +220,6 @@ export function HomeScreen() {
                         </View>
                     </View>
                 )}
-
-                {/* Monthly Streak Widget */}
-                <StreakWidget completedDates={completedDates} />
 
                 {/* To-Do List */}
                 <View style={styles.todoSection}>
@@ -298,19 +297,37 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.colors.background },
-    scroll: { paddingHorizontal: 20, paddingTop: 60 },
+    scroll: { paddingHorizontal: 20, paddingTop: 52 },
     header: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24,
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
     },
-    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    accountBtn: {
-        width: 38, height: 38, borderRadius: 19,
-        backgroundColor: theme.colors.primaryContainer,
-        alignItems: 'center', justifyContent: 'center',
+    logoText: {
+        fontSize: 22, fontWeight: '900', color: theme.colors.primary,
+        letterSpacing: 3, textTransform: 'uppercase',
     },
-    greeting: { fontSize: 15, color: theme.colors.textSecondary, fontWeight: '400' },
-    name: { fontSize: 26, fontWeight: '800', color: theme.colors.textPrimary, letterSpacing: -0.5 },
-    date: { fontSize: 13, color: theme.colors.textMuted, fontWeight: '500', marginTop: 4 },
+    headerRight: { alignItems: 'flex-end' },
+    greeting: { fontSize: 13, color: theme.colors.textSecondary, fontWeight: '500' },
+    todayLabel: {
+        fontSize: 12, fontWeight: '600', color: theme.colors.textMuted,
+        textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10,
+    },
+    separator: {
+        height: 1,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        marginBottom: 12,
+    },
+    progressBarTrack: {
+        height: 5,
+        backgroundColor: theme.colors.surfaceContainerHigh,
+        borderRadius: 3,
+        overflow: 'hidden',
+        marginBottom: 6,
+    },
+    progressBarFill: {
+        height: '100%',
+        backgroundColor: theme.colors.primary,
+        borderRadius: 3,
+    },
     heroRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
     heroCard: {
         flex: 1, backgroundColor: theme.colors.surfaceContainerLowest,
@@ -325,20 +342,14 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5, marginBottom: 8,
     },
     heroTarget: { fontSize: 14, fontWeight: '400', color: theme.colors.textMuted },
-    heroBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-    heroBadge: {
-        backgroundColor: '#e6f9f0', paddingHorizontal: 10, paddingVertical: 4,
-        borderRadius: theme.borderRadius.pill,
-    },
-    heroBadgeText: { fontSize: 10, fontWeight: '700', color: theme.colors.primary, letterSpacing: 0.5 },
-    heroRemaining: { fontSize: 12, color: theme.colors.textMuted, fontWeight: '500' },
+    heroRemaining: { fontSize: 11, color: theme.colors.textMuted, fontWeight: '500' },
     meterCard: {
         backgroundColor: theme.colors.surfaceContainerLowest,
         borderRadius: theme.borderRadius.md, padding: 10,
         alignItems: 'center', justifyContent: 'center',
     },
-    statsScroll: { marginBottom: 24 },
-    statsRow: { flexDirection: 'row', gap: 10, paddingRight: 20 },
+    statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+    statGridItem: { width: '47.5%' },
     sectionTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.textPrimary, marginBottom: 12 },
     // Step editor
     stepEditor: {

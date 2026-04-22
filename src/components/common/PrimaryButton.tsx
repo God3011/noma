@@ -63,7 +63,7 @@ export function PrimaryButton({
             style={[disabled && styles.disabled, style]}
         >
             <LinearGradient
-                colors={['#006c49', '#10b981']}
+                colors={['#CC5500', '#FF6B00']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.gradient]}

@@ -21,7 +21,7 @@ export function StatCard({ icon, imageIcon, iconColor, label, value, subtitle, s
                 {imageIcon ? (
                     <Image source={imageIcon} style={[styles.imageIcon, { tintColor: iconColor || theme.colors.primary }]} />
                 ) : icon ? (
-                    <Ionicons name={icon} size={20} color={iconColor || theme.colors.primary} />
+                    <Ionicons name={icon} size={18} color={iconColor || theme.colors.primary} />
                 ) : null}
             </View>
             <Text style={styles.label}>{label}</Text>
@@ -45,14 +45,14 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: theme.colors.surfaceContainerLowest,
         borderRadius: theme.borderRadius.md,
-        padding: 16,
-        minWidth: 130,
+        padding: 14,
+        minWidth: 90,
         alignItems: 'center',
     },
     iconWrap: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 8,
@@ -62,8 +62,8 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: theme.colors.textMuted,
         textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: 4,
+        letterSpacing: 0.8,
+        marginBottom: 3,
     },
     value: {
         fontSize: 18,

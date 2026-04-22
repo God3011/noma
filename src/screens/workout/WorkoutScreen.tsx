@@ -81,9 +81,13 @@ export function WorkoutScreen() {
                     <TouchableOpacity onPress={() => setSelectedDate(getToday())}>
                         <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setSelectedDate(getNextDay(selectedDate))}>
-                        <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
-                    </TouchableOpacity>
+                    {selectedDate < getToday() ? (
+                        <TouchableOpacity onPress={() => setSelectedDate(getNextDay(selectedDate))}>
+                            <Ionicons name="chevron-forward" size={24} color={theme.colors.textSecondary} />
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={{ width: 24 }} />
+                    )}
                 </View>
 
                 {/* Summary */}
@@ -163,7 +167,14 @@ export function WorkoutScreen() {
                 </View>
 
                 {/* Workout List — one card per exercise */}
-                <Text style={styles.logTitle}>Today's Log</Text>
+                <View style={styles.logTitleRow}>
+                    <Text style={styles.logTitle}>Today's Log</Text>
+                    {dayWorkouts.length > 0 && (
+                        <TouchableOpacity onPress={() => navigation.navigate('SessionDetail', { date: selectedDate })}>
+                            <Text style={styles.viewSessionLink}>View Session</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
                 {dayWorkouts.length === 0 ? (
                     <View style={styles.emptyState}>
                         <Ionicons name="fitness-outline" size={48} color={theme.colors.surfaceContainerHigh} />
@@ -194,11 +205,11 @@ export function WorkoutScreen() {
             {/* FAB */}
             <TouchableOpacity
                 style={styles.fab}
-                onPress={() => navigation.navigate('AddWorkout')}
+                onPress={() => navigation.navigate('ActiveWorkout', { date: selectedDate })}
                 activeOpacity={0.85}
             >
                 <LinearGradient
-                    colors={['#006c49', '#10b981']}
+                    colors={['#CC5500', '#FF6B00']}
                     style={styles.fabGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -275,8 +286,14 @@ const styles = StyleSheet.create({
     addPresetCardText: {
         fontSize: 11, fontWeight: '600', color: theme.colors.primary, textAlign: 'center',
     },
+    logTitleRow: {
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
+    },
     logTitle: {
-        fontSize: 18, fontWeight: '700', color: theme.colors.textPrimary, marginBottom: 12,
+        fontSize: 18, fontWeight: '700', color: theme.colors.textPrimary,
+    },
+    viewSessionLink: {
+        fontSize: 13, fontWeight: '700', color: theme.colors.primary,
     },
     emptyState: {
         alignItems: 'center', paddingVertical: 48, gap: 8,
@@ -286,7 +303,7 @@ const styles = StyleSheet.create({
     fab: { position: 'absolute', bottom: 100, right: 20, zIndex: 10 },
     fabGradient: {
         width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center',
-        shadowColor: '#006c49', shadowOffset: { width: 0, height: 4 },
+        shadowColor: '#FF6B00', shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
     },
 });

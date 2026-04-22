@@ -43,29 +43,16 @@ export default function FoodRatingScreen() {
                     activeOpacity={0.88}
                 >
                     <LinearGradient
-                        colors={['#006c49', '#10b981']}
+                        colors={['#CC5500', '#FF6B00']}
                         style={styles.scanBtn}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                     >
-                        <Ionicons name="barcode-outline" size={52} color="#fff" />
+                        <Ionicons name="barcode-outline" size={36} color="#fff" />
                         <Text style={styles.scanBtnText}>Scan Barcode</Text>
                         <Text style={styles.scanBtnSub}>Point at any packaged food product</Text>
                     </LinearGradient>
                 </TouchableOpacity>
-
-                {/* Rating legend */}
-                <View style={styles.legendCard}>
-                    <Text style={styles.legendTitle}>Rating Guide</Text>
-                    <View style={styles.legendRow}>
-                        {(['A', 'B', 'C', 'D', 'E'] as const).map((r) => (
-                            <View key={r} style={styles.legendItem}>
-                                <NutritionRatingBadge rating={r} size="small" />
-                                <Text style={styles.legendLabel}>{RATING_LABELS[r]}</Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
 
                 {/* Recent scans */}
                 {history.length > 0 && (
@@ -124,9 +111,9 @@ const styles = StyleSheet.create({
     scanBtnWrap: { marginBottom: 20 },
     scanBtn: {
         borderRadius: theme.borderRadius.lg,
-        padding: 32,
+        padding: 20,
         alignItems: 'center',
-        shadowColor: '#006c49',
+        shadowColor: '#FF6B00',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 12,

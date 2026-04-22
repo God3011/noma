@@ -1,92 +1,44 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../../constants/theme';
 import { getToday } from '../../utils/dateHelpers';
 
-interface StreakWidgetProps {
-    completedDates: string[]; // array of strings in 'YYYY-MM-DD' format
-}
+interface StreakWidgetProps { completedDates: string[]; }
 
-function getShortMonth(monthIndex: number) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months[monthIndex];
+function getShortMonth(m: number) {
+    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m];
 }
-
-const screenWidth = Dimensions.get('window').width;
-const widgetWidth = screenWidth - 40; // 20 padding on each side of the container in HomeScreen
-const contentWidth = widgetWidth - 48; // 24 padding inside StreakWidget container
 
 export function StreakWidget({ completedDates }: StreakWidgetProps) {
     const todayStr = getToday();
     const today = new Date(todayStr);
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // We want 3 months ending in the current month. Order: Current (0), Prev (1), Prev Prev (2)
-    const monthsData = useMemo(() => {
-        const data = [];
-        for (let i = 0; i <= 2; i++) {
-            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-            const year = d.getFullYear();
-            const month = d.getMonth();
-            const monthName = getShortMonth(month);
-
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 is Sunday
-
-            const days = [];
-            // padding for first week
-            for (let j = 0; j < firstDayOfWeek; j++) {
-                days.push(null);
-            }
-            for (let j = 1; j <= daysInMonth; j++) {
-                days.push(j);
-            }
-
-            data.push({ year, month, monthName, days });
-        }
-        return data;
+    const days = useMemo(() => {
+        const arr: number[] = [];
+        for (let j = 1; j <= daysInMonth; j++) arr.push(j);
+        return arr;
     }, [todayStr]);
 
     return (
         <View style={styles.container}>
-            <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                style={styles.monthsScroll}
-            >
-                {monthsData.map((m, mIndex) => (
-                    <View key={mIndex} style={[styles.monthBlock, { width: contentWidth }]}>
-                        <Text style={styles.monthLabel}>{m.monthName}</Text>
-                        <View style={styles.grid}>
-                            {m.days.map((day, dIndex) => {
-                                if (day === null) {
-                                    return <View key={dIndex} style={styles.emptyDot} />;
-                                }
-                                const dateStr = `${m.year}-${String(m.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                                const isCompleted = completedDates.includes(dateStr);
-
-                                return (
-                                    <View
-                                        key={dIndex}
-                                        style={[
-                                            styles.dot,
-                                            isCompleted ? styles.dotActive : styles.dotInactive
-                                        ]}
-                                    />
-                                );
-                            })}
-                        </View>
-                    </View>
-                ))}
-            </ScrollView>
-
-            <View style={styles.bottomSection}>
-                <View style={styles.circleGraphic}>
-                    <Text style={styles.circleNumber}>{completedDates.length}</Text>
+            <View style={styles.leftCol}>
+                <View style={styles.circle}>
+                    <Text style={styles.count}>{completedDates.length}</Text>
                 </View>
-                <View>
-                    <Text style={styles.bottomTitle}>Total Streaks</Text>
-                    <Text style={styles.bottomSubtitle}>Active Days</Text>
+                <Text style={styles.countLabel}>Active</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.rightCol}>
+                <Text style={styles.monthLabel}>{getShortMonth(month)}</Text>
+                <View style={styles.grid}>
+                    {days.map((day) => {
+                        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                        const active = completedDates.includes(dateStr);
+                        return <View key={day} style={[styles.dot, active ? styles.dotActive : styles.dotInactive]} />;
+                    })}
                 </View>
             </View>
         </View>
@@ -95,81 +47,25 @@ export function StreakWidget({ completedDates }: StreakWidgetProps) {
 
 const styles = StyleSheet.create({
     container: {
+        flexDirection: 'row', alignItems: 'center',
         backgroundColor: theme.colors.surfaceContainerLow,
-        borderRadius: 24,
-        padding: 24,
-        marginBottom: 20,
+        borderRadius: theme.borderRadius.md,
+        paddingHorizontal: 12, paddingVertical: 7,
+        marginBottom: 10, marginTop: 4, gap: 10,
     },
-    monthsScroll: {
-        marginBottom: 24,
+    leftCol: { alignItems: 'center', gap: 3 },
+    circle: {
+        width: 32, height: 32, borderRadius: 16,
+        borderWidth: 2, borderColor: theme.colors.primary,
+        alignItems: 'center', justifyContent: 'center',
     },
-    monthBlock: {
-        alignItems: 'center',
-    },
-    monthLabel: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: theme.colors.textPrimary,
-        marginBottom: 12,
-    },
-    grid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'flex-start',
-        width: 140, // 7 items * 20px (10px width + 10px margin total)
-    },
-    emptyDot: {
-        width: 10,
-        height: 10,
-        margin: 5,
-    },
-    dot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        margin: 5,
-    },
-    dotInactive: {
-        backgroundColor: theme.colors.surfaceContainerHighest,
-    },
-    dotActive: {
-        backgroundColor: theme.colors.primary,
-        shadowColor: theme.colors.primary,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    bottomSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.05)',
-    },
-    circleGraphic: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        borderWidth: 2,
-        borderColor: theme.colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 16,
-    },
-    circleNumber: {
-        color: theme.colors.primary,
-        fontSize: 16,
-        fontWeight: '700',
-    },
-    bottomTitle: {
-        color: theme.colors.textWhite,
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 4,
-    },
-    bottomSubtitle: {
-        color: theme.colors.textMuted,
-        fontSize: 13,
-    }
+    count: { fontSize: 13, fontWeight: '800', color: theme.colors.primary },
+    countLabel: { fontSize: 8, fontWeight: '600', color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.4 },
+    divider: { width: 1, height: 38, backgroundColor: theme.colors.outlineVariant },
+    rightCol: { flex: 1 },
+    monthLabel: { fontSize: 9, fontWeight: '700', color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2 },
+    dot: { width: 6, height: 6, borderRadius: 3 },
+    dotInactive: { backgroundColor: theme.colors.surfaceContainerHighest },
+    dotActive: { backgroundColor: theme.colors.primary },
 });

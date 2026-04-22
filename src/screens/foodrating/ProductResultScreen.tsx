@@ -29,7 +29,7 @@ const RATING_DESCRIPTIONS: Record<string, string> = {
 };
 
 const RATING_BG: Record<string, string> = {
-    A: '#005236', B: '#3f4b23', C: '#653e00', D: '#6b3622', E: '#93000a',
+    A: '#1a4d2e', B: '#3f4b23', C: '#653e00', D: '#6b3622', E: '#93000a',
 };
 
 

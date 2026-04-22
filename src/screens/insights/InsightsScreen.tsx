@@ -104,6 +104,23 @@ export default function InsightsScreen() {
                 ))}
             </View>
 
+            {/* Streak + Overall Score — top of page */}
+            <StreakCard current={insights.currentStreak} best={insights.bestStreak} />
+            <View style={styles.statRow}>
+                <StatHighlightCard
+                    label="Overall Score"
+                    value={`${Math.round(insights.avgDailyScore)}`}
+                    unit="/ 100"
+                    trend={insights.scoreTrend}
+                />
+                <StatHighlightCard
+                    label="Workouts"
+                    value={`${insights.workoutCount}`}
+                    unit="sessions"
+                    trend={insights.workoutTrend}
+                />
+            </View>
+
             {/* This Week */}
             <SectionHeader title="This period" />
             <View style={styles.statRow}>
@@ -112,12 +129,6 @@ export default function InsightsScreen() {
                     value={`${Math.round(insights.avgDailyCalories)}`}
                     unit="kcal"
                     trend={insights.calorieTrend}
-                />
-                <StatHighlightCard
-                    label="Workouts"
-                    value={`${insights.workoutCount}`}
-                    unit="sessions"
-                    trend={insights.workoutTrend}
                 />
                 <StatHighlightCard
                     label="Avg score"
@@ -137,7 +148,6 @@ export default function InsightsScreen() {
             {/* Workouts */}
             <SectionHeader title="Workouts" subtitle="Training days in this period" />
             <WorkoutFrequencyChart data={insights.workoutFrequencyData} />
-            <StreakCard current={insights.currentStreak} best={insights.bestStreak} />
 
             {/* Daily Score */}
             <SectionHeader title="Daily score" subtitle="Your 0–100 rating over time" />

@@ -1,16 +1,16 @@
 export const theme = {
     colors: {
-        // Primary palette
-        primary: '#10b981',
-        primaryLight: '#4edea3',
-        primaryContainer: '#005236',
-        onPrimary: '#002113',
-        onPrimaryContainer: '#6ffbbe',
+        // Primary palette - Orange accent
+        primary: '#FF6B00',
+        primaryLight: '#FF9A4D',
+        primaryContainer: '#3D1A00',
+        onPrimary: '#1A0800',
+        onPrimaryContainer: '#FFD4B3',
 
         // Secondary
-        secondary: '#b7c8e1',
-        secondaryContainer: '#38485d',
-        onSecondaryContainer: '#d3e4fe',
+        secondary: '#b7c4e1',
+        secondaryContainer: '#2e3850',
+        onSecondaryContainer: '#d3dcfe',
 
         // Tertiary (amber/warning)
         tertiary: '#ffb95f',
@@ -18,22 +18,22 @@ export const theme = {
         onTertiaryContainer: '#ffddb8',
 
         // Surfaces
-        background: '#131313',
-        surface: '#131313',
+        background: '#0D0D0D',
+        surface: '#0D0D0D',
         surfaceContainerLowest: '#000000',
-        surfaceContainerLow: '#1c1b1b',
-        surfaceContainer: '#191c1e',
-        surfaceContainerHigh: '#2d3133',
-        surfaceContainerHighest: '#353534',
+        surfaceContainerLow: '#181818',
+        surfaceContainer: '#1E1E1E',
+        surfaceContainerHigh: '#272727',
+        surfaceContainerHighest: '#333333',
 
         // On-colors
         onBackground: '#ffffff',
         onSurface: '#ffffff',
-        onSurfaceVariant: '#bbcabf',
+        onSurfaceVariant: '#b0b8c1',
 
         // Outline
-        outline: '#8a938c',
-        outlineVariant: '#3c4a42',
+        outline: '#6b7280',
+        outlineVariant: '#2a2a2a',
 
         // Error
         error: '#ffb4ab',
@@ -41,19 +41,19 @@ export const theme = {
         onError: '#ffffff',
 
         // Misc
-        inverseSurface: '#f7f9fb',
-        inverseOnSurface: '#191c1e',
-        inversePrimary: '#006c49',
+        inverseSurface: '#f5f5f5',
+        inverseOnSurface: '#1E1E1E',
+        inversePrimary: '#CC5500',
 
         // Status colors
-        success: '#10b981',
+        success: '#22c55e',
         warning: '#ffb95f',
         danger: '#ffb4ab',
 
         // Text
         textPrimary: '#ffffff',
-        textSecondary: '#bbcabf',
-        textMuted: '#8a938c',
+        textSecondary: '#b0b8c1',
+        textMuted: '#6b7280',
         textWhite: '#ffffff',
     },
 

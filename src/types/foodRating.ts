@@ -18,6 +18,7 @@ export interface ScannedProduct {
   nutrition: NutritionData;
   gemini_notes?: string;
   gemini_confidence?: 'low' | 'medium' | 'high';
+  data_source?: string;
 }
 
 export interface ScanHistoryItem {

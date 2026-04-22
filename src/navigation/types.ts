@@ -18,6 +18,10 @@ export type RootStackParamList = {
     Main: undefined;
     AddMeal: undefined;
     AddWorkout: { presetMode?: boolean; editPresetId?: string } | undefined;
+    ActiveWorkout: { date?: string } | undefined;
+    SessionDetail: { date: string };
+    MuscleRankings: undefined;
     SaveMeal: undefined;
     Account: undefined;
+    Avatar: undefined;
 };
